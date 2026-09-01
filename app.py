@@ -141,7 +141,6 @@ if secilen_sayfa == "📊 Tedarikçi Kalite & Karar Paneli":
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
-    # Puanlama Motoru
     def calculate_scores(dataframe):
         temp_df = dataframe.copy()
         def normalize_inverse(series):
@@ -319,13 +318,13 @@ if secilen_sayfa == "📊 Tedarikçi Kalite & Karar Paneli":
     st.download_button("📥 Kalite Raporunu Excel Olarak İndir", excel_out.getvalue(), "Tedarikci_Kalite_Raporu.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 # ==============================================================================
-# SAYFA 2: DİJİTAL NUMUNE TAKİP SİSTEMİ (EXCEL İÇE AKTARMA DESTEKLİ)
+# SAYFA 2: DİJİTAL NUMUNE TAKİP SİSTEMİ (ESNEK & BOŞLUKLARI TOLERE EDEN MOD)
 # ==============================================================================
 else:
     st.title("🧪 Dijital Numune Takip & Süreç Yönetim Sistemi")
     st.caption("Numuneleri doğrudan kaydedin, geçmiş Excel arşivini içe aktarın ve analiz süreçlerini yönetin.")
 
-    # --- TOPLU NUMUNE YÜKLEME & ŞABLON ALANI ---
+    # --- ESNEK NUMUNE İÇE AKTARMA MOTORU ---
     with st.expander("📥 Geçmiş Numune Arşivini Excel / CSV Olarak İçe Aktar", expanded=False):
         col_up1, col_up2 = st.columns([2, 1])
         with col_up1:
@@ -333,27 +332,76 @@ else:
             if uploaded_samples:
                 try:
                     loaded_df = pd.read_csv(uploaded_samples) if uploaded_samples.name.endswith(".csv") else pd.read_excel(uploaded_samples)
-                    gerekli_kolonlar = ["Numune Kodu", "Tedarikçi", "Numune Tanımı", "Kabul Tarihi", "Mevcut Durum", "Laboratuvar Notu"]
                     
-                    # Kolon kontrolü
-                    if all(col in loaded_df.columns for col in gerekli_kolonlar):
-                        if st.button("🔄 Bu Dosyayı Numune Tablosuna Yükle / Değiştir"):
-                            st.session_state["numuneler"] = loaded_df
-                            st.success(f"Tebrikler! Toplam {len(loaded_df)} adet numune kaydı sisteme aktarıldı.")
-                            st.rerun()
+                    # Tamamen boş satırları temizle
+                    loaded_df = loaded_df.dropna(how='all').reset_index(drop=True)
+                    
+                    if len(loaded_df) == 0:
+                        st.warning("Yüklenen dosya boş!")
                     else:
-                        st.error(f"Hata: Excel tablonuzda şu başlıklar eksiksiz bulunmalıdır: {', '.join(gerekli_kolonlar)}")
+                        # Eksik başlıkları otomatik oluştur ve varsayılan değerleri bas
+                        bugun = datetime.date.today().strftime("%Y-%m-%d")
+                        
+                        if "Tedarikçi" not in loaded_df.columns:
+                            loaded_df["Tedarikçi"] = "Bilinmeyen Tedarikçi"
+                        else:
+                            loaded_df["Tedarikçi"] = loaded_df["Tedarikçi"].fillna("Bilinmeyen Tedarikçi").astype(str)
+
+                        if "Numune Tanımı" not in loaded_df.columns:
+                            loaded_df["Numune Tanımı"] = "Genel Numune"
+                        else:
+                            loaded_df["Numune Tanımı"] = loaded_df["Numune Tanımı"].fillna("Genel Numune").astype(str)
+
+                        if "Kabul Tarihi" not in loaded_df.columns:
+                            loaded_df["Kabul Tarihi"] = bugun
+                        else:
+                            loaded_df["Kabul Tarihi"] = loaded_df["Kabul Tarihi"].fillna(bugun).astype(str)
+
+                        if "Mevcut Durum" not in loaded_df.columns:
+                            loaded_df["Mevcut Durum"] = "Bekliyor"
+                        else:
+                            loaded_df["Mevcut Durum"] = loaded_df["Mevcut Durum"].fillna("Bekliyor").astype(str)
+
+                        if "Laboratuvar Notu" not in loaded_df.columns:
+                            loaded_df["Laboratuvar Notu"] = "Not girilmedi"
+                        else:
+                            loaded_df["Laboratuvar Notu"] = loaded_df["Laboratuvar Notu"].fillna("Not girilmedi").astype(str)
+
+                        if "Numune Kodu" not in loaded_df.columns:
+                            loaded_df["Numune Kodu"] = [f"NUM-2026-{i+1:03d}" for i in range(len(loaded_df))]
+                        else:
+                            # Boş olan kodlara otomatik kod üret
+                            for idx, val in enumerate(loaded_df["Numune Kodu"]):
+                                if pd.isna(val) or str(val).strip() == "":
+                                    loaded_df.at[idx, "Numune Kodu"] = f"NUM-2026-{idx+1:03d}"
+                            loaded_df["Numune Kodu"] = loaded_df["Numune Kodu"].astype(str)
+
+                        # Standart sütun sırasına sok
+                        standart_df = loaded_df[["Numune Kodu", "Tedarikçi", "Numune Tanımı", "Kabul Tarihi", "Mevcut Durum", "Laboratuvar Notu"]]
+                        
+                        col_btn1, col_btn2 = st.columns(2)
+                        with col_btn1:
+                            if st.button("🔄 Tabloyu Bu Verilerle Değiştir (Sıfırla & Yükle)"):
+                                st.session_state["numuneler"] = standart_df
+                                st.success(f"{len(standart_df)} adet dolu kayıt başarıyla aktarıldı!")
+                                st.rerun()
+                        with col_btn2:
+                            if st.button("➕ Mevcut Listenin Altına Ekle"):
+                                st.session_state["numuneler"] = pd.concat([st.session_state["numuneler"], standart_df], ignore_index=True)
+                                st.success(f"{len(standart_df)} yeni kayıt listenin altına eklendi!")
+                                st.rerun()
+                                
                 except Exception as e:
                     st.error(f"Dosya okunurken bir hata oluştu: {e}")
 
         with col_up2:
-            st.markdown("**Numune Excel Şablonu:**")
-            st.caption("Geçmiş verilerinizi bu formatta hazırlayabilirsiniz.")
+            st.markdown("**Örnek Şablon:**")
+            st.caption("İsterseniz boş bir şablon indirip kullanabilirsiniz.")
             sample_template_io = io.BytesIO()
             with pd.ExcelWriter(sample_template_io, engine='openpyxl') as writer:
                 st.session_state["numuneler"].to_excel(writer, index=False, sheet_name='Numune_Sablon')
             st.download_button(
-                label="📄 Örnek Numune Şablonu İndir",
+                label="📄 Numune Şablonunu İndir",
                 data=sample_template_io.getvalue(),
                 file_name="Numune_Sablonu.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -443,7 +491,7 @@ st.sidebar.markdown(
     <div style='background-color: rgba(128, 128, 128, 0.1); padding: 12px; border-radius: 8px; text-align: center; margin-top: 20px;'>
         <p style='margin: 0; font-size: 13px; font-weight: bold;'>Developed by</p>
         <p style='margin: 0; font-size: 18px; color: #FF4B4B; font-weight: 800;'>⚡ miyaetp</p>
-        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v3.2.0 • Data Import Edition</p>
+        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v3.3.0 • Smart Tolerant Loader</p>
     </div>
     """,
     unsafe_allow_html=True
