@@ -121,11 +121,11 @@ if secilen_sayfa == "📊 Tedarikçi Kalite & Karar Paneli":
     data_source = st.sidebar.radio("Kaynak Seçimi:", ["Örnek ERP Verisi Kullan", "Excel/CSV Yükle"])
 
     if data_source == "Excel/CSV Yükle":
-        uploaded_file = st.sidebar.file_uploader("Excel veya CSV Seç", type=["xlsx", "csv"])
+        uploaded_file = st.sidebar.file_uploader("Tedarikçi Analiz Dosyası Seç (xlsx/csv)", type=["xlsx", "csv"])
         if uploaded_file:
             df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith(".csv") else pd.read_excel(uploaded_file)
         else:
-            st.info("Lütfen bir veri dosyası yükleyin.")
+            st.info("Lütfen bir tedarikçi veri dosyası yükleyin.")
             st.stop()
     else:
         df = get_sample_data()
@@ -319,11 +319,45 @@ if secilen_sayfa == "📊 Tedarikçi Kalite & Karar Paneli":
     st.download_button("📥 Kalite Raporunu Excel Olarak İndir", excel_out.getvalue(), "Tedarikci_Kalite_Raporu.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 # ==============================================================================
-# SAYFA 2: TAMAMEN DİJİTAL NUMUNE TAKİP SİSTEMİ (QR'SIZ - DOĞRUDAN SİTE ÜZERİNDEN)
+# SAYFA 2: DİJİTAL NUMUNE TAKİP SİSTEMİ (EXCEL İÇE AKTARMA DESTEKLİ)
 # ==============================================================================
 else:
     st.title("🧪 Dijital Numune Takip & Süreç Yönetim Sistemi")
-    st.caption("Numuneleri doğrudan arayüzden kaydedin, durumlarını tek tıkla güncelleyin ve analiz sonuçlarını yönetin.")
+    st.caption("Numuneleri doğrudan kaydedin, geçmiş Excel arşivini içe aktarın ve analiz süreçlerini yönetin.")
+
+    # --- TOPLU NUMUNE YÜKLEME & ŞABLON ALANI ---
+    with st.expander("📥 Geçmiş Numune Arşivini Excel / CSV Olarak İçe Aktar", expanded=False):
+        col_up1, col_up2 = st.columns([2, 1])
+        with col_up1:
+            uploaded_samples = st.file_uploader("Numune Listesi Dosyası Seç (.xlsx veya .csv)", type=["xlsx", "csv"], key="numune_uploader")
+            if uploaded_samples:
+                try:
+                    loaded_df = pd.read_csv(uploaded_samples) if uploaded_samples.name.endswith(".csv") else pd.read_excel(uploaded_samples)
+                    gerekli_kolonlar = ["Numune Kodu", "Tedarikçi", "Numune Tanımı", "Kabul Tarihi", "Mevcut Durum", "Laboratuvar Notu"]
+                    
+                    # Kolon kontrolü
+                    if all(col in loaded_df.columns for col in gerekli_kolonlar):
+                        if st.button("🔄 Bu Dosyayı Numune Tablosuna Yükle / Değiştir"):
+                            st.session_state["numuneler"] = loaded_df
+                            st.success(f"Tebrikler! Toplam {len(loaded_df)} adet numune kaydı sisteme aktarıldı.")
+                            st.rerun()
+                    else:
+                        st.error(f"Hata: Excel tablonuzda şu başlıklar eksiksiz bulunmalıdır: {', '.join(gerekli_kolonlar)}")
+                except Exception as e:
+                    st.error(f"Dosya okunurken bir hata oluştu: {e}")
+
+        with col_up2:
+            st.markdown("**Numune Excel Şablonu:**")
+            st.caption("Geçmiş verilerinizi bu formatta hazırlayabilirsiniz.")
+            sample_template_io = io.BytesIO()
+            with pd.ExcelWriter(sample_template_io, engine='openpyxl') as writer:
+                st.session_state["numuneler"].to_excel(writer, index=False, sheet_name='Numune_Sablon')
+            st.download_button(
+                label="📄 Örnek Numune Şablonu İndir",
+                data=sample_template_io.getvalue(),
+                file_name="Numune_Sablonu.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
 
     s_df = st.session_state["numuneler"]
     
@@ -344,12 +378,12 @@ else:
         with st.form("yeni_numune_form", clear_on_submit=True):
             oto_kod = f"NUM-2026-{len(st.session_state['numuneler']) + 1:03d}"
             st.text_input("Numune Kodu:", value=oto_kod, disabled=True)
-            tedarikci_sec = st.selectbox("Tedarikçi Firma:", ["Tedarikçi A", "Tedarikçi B", "Tedarikçi C", "Tedarikçi D", "Tedarikçi E", "Tedarikçi F"])
+            tedarikci_sec = st.text_input("Tedarikçi Firma:", placeholder="Örn: Firma A")
             tanim_gir = st.text_input("Numune Tanımı / Lot Numarası:", placeholder="Örn: Yeni Formülasyon Esans Şarjı")
             not_gir = st.text_input("Başlangıç Test Amacı:", placeholder="Örn: GC-MS Saflık ve Koku Testi")
             kayit_butonu = st.form_submit_button("📥 Numuneyi Kaydet")
 
-            if kayit_butonu and tanim_gir:
+            if kayit_butonu and tanim_gir and tedarikci_sec:
                 yeni_kayit = pd.DataFrame([{
                     "Numune Kodu": oto_kod,
                     "Tedarikçi": tedarikci_sec,
@@ -371,11 +405,10 @@ else:
 
             st.info(f"**Tedarikçi:** {satir['Tedarikçi']} | **Tanım:** {satir['Numune Tanımı']} | **Giriş:** {satir['Kabul Tarihi']}")
             
-            yeni_durum_sec = st.selectbox(
-                "Numunenin Yeni Durumu:",
-                ["Bekliyor", "Analizde", "Kalite Onaylandı", "Reddedildi"],
-                index=["Bekliyor", "Analizde", "Kalite Onaylandı", "Reddedildi"].index(satir["Mevcut Durum"])
-            )
+            durum_secenekleri = ["Bekliyor", "Analizde", "Kalite Onaylandı", "Reddedildi"]
+            varsayilan_idx = durum_secenekleri.index(satir["Mevcut Durum"]) if satir["Mevcut Durum"] in durum_secenekleri else 0
+            
+            yeni_durum_sec = st.selectbox("Numunenin Yeni Durumu:", durum_secenekleri, index=varsayilan_idx)
             guncel_not_gir = st.text_area("Laboratuvar / Test Değerlendirme Notu:", value=satir["Laboratuvar Notu"], height=80)
             
             if st.button("💾 Sonucu Sisteme Kaydet", use_container_width=True):
@@ -389,7 +422,6 @@ else:
     # Alt Bölüm: Görsel Süreç Tablosu & Excel Dışa Aktarma
     st.subheader("📋 Canlı Numune Takip Listesi")
     
-    # Durum Filtresi
     filtre = st.radio("Listelenecek Durum:", ["Tümü", "Bekliyor", "Analizde", "Kalite Onaylandı", "Reddedildi"], horizontal=True)
     gosterilecek_df = st.session_state["numuneler"] if filtre == "Tümü" else st.session_state["numuneler"][st.session_state["numuneler"]["Mevcut Durum"] == filtre]
     
@@ -411,7 +443,7 @@ st.sidebar.markdown(
     <div style='background-color: rgba(128, 128, 128, 0.1); padding: 12px; border-radius: 8px; text-align: center; margin-top: 20px;'>
         <p style='margin: 0; font-size: 13px; font-weight: bold;'>Developed by</p>
         <p style='margin: 0; font-size: 18px; color: #FF4B4B; font-weight: 800;'>⚡ miyaetp</p>
-        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v3.1.0 • Web Sample Manager</p>
+        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v3.2.0 • Data Import Edition</p>
     </div>
     """,
     unsafe_allow_html=True
