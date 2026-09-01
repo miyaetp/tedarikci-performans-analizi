@@ -8,8 +8,8 @@ import plotly.graph_objects as go
 
 # 1. Sayfa Yapılandırması
 st.set_page_config(
-    page_title="Parfüm Tedarikçi Kalite Sistemi | miyaetp",
-    page_icon="🌸",
+    page_title="Tedarikçi Kalite Sistemi | miyaetp",
+    page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -56,8 +56,8 @@ if not st.session_state["authenticated"]:
         st.markdown(
             """
             <div style='background-color: rgba(128, 128, 128, 0.08); padding: 30px; border-radius: 12px; text-align: center; border: 1px solid rgba(128, 128, 128, 0.2);'>
-                <h2 style='margin-bottom: 5px;'>🔒 Parfüm Kalite & Satın Alma Girişi</h2>
-                <p style='color: gray; font-size: 14px;'>Hammadde, Esans ve Ambalaj Kalite Karar Destek Sistemi</p>
+                <h2 style='margin-bottom: 5px;'>🔒 Yetkili Girişi</h2>
+                <p style='color: gray; font-size: 14px;'>Tedarikçi Kalite & Karar Destek Sistemi</p>
             </div>
             """,
             unsafe_allow_html=True
@@ -68,25 +68,17 @@ if not st.session_state["authenticated"]:
         st.caption("⚡ Developed by **miyaetp**")
     st.stop()
 
-# --- 3. PARFÜM SEKTÖRÜ VERİ YÖNETİMİ ---
+# --- 3. VERİ YÖNETİMİ ---
 @st.cache_data
 def get_sample_data():
     return pd.DataFrame({
         "Tedarikçi": [
-            "Grasse Fragrance Oils Ltd.", 
-            "Etanol Kimya Saflık Sanayi", 
-            "Vetro Lüks Parfüm Şişeleri", 
-            "AeroSpray Valf & Pompa", 
-            "Zamak & Magnetik Lüks Kapak", 
-            "Prestige Parfüm Kutusu & Baskı"
-        ],
-        "Kategori": [
-            "Esans & Koku Yağları (IFRA)", 
-            "Kozmetik Alkol (Etanol)", 
-            "Cam Şişe & Ambalaj", 
-            "Valf & Sprey Pompa", 
-            "Zamak & Manyetik Kapak", 
-            "Lüks Kutu & Matbaa"
+            "Tedarikçi A", 
+            "Tedarikçi B", 
+            "Tedarikçi C", 
+            "Tedarikçi D", 
+            "Tedarikçi E", 
+            "Tedarikçi F"
         ],
         "Yıllık Harcama (Bin TL)": [9500, 3800, 5200, 2100, 2800, 1650],
         "Ret Oranı (%)": [0.8, 1.5, 3.8, 4.5, 1.2, 2.0],
@@ -100,11 +92,11 @@ if st.sidebar.button("🚪 Güvenli Çıkış Yap"):
     st.session_state["authenticated"] = False
     st.rerun()
 
-st.sidebar.header("⚙️ Parfüm Kalite Ağırlıkları (%)")
-w_ret = st.sidebar.slider("Ret Oranı (Organoleptik/Laboratuvar)", 0, 100, 35, step=5)
-w_belge = st.sidebar.slider("Belge Eksikliği (IFRA/CoA/MSDS/GC-MS)", 0, 100, 25, step=5)
-w_uyg = st.sidebar.slider("Fiziksel / Kimyasal Uygunsuzluk", 0, 100, 25, step=5)
-w_teslim = st.sidebar.slider("Termin & Teslimat Gecikmesi", 0, 100, 15, step=5)
+st.sidebar.header("⚙️ Değerlendirme Ağırlıkları (%)")
+w_ret = st.sidebar.slider("Ret Oranı Ağırlığı", 0, 100, 35, step=5)
+w_belge = st.sidebar.slider("Belge / Sertifika Eksikliği Ağırlığı", 0, 100, 25, step=5)
+w_uyg = st.sidebar.slider("Uygunsuzluk Sayısı Ağırlığı", 0, 100, 25, step=5)
+w_teslim = st.sidebar.slider("Teslimat Gecikmesi Ağırlığı", 0, 100, 15, step=5)
 
 total_weight = w_ret + w_belge + w_uyg + w_teslim
 if total_weight != 100:
@@ -115,34 +107,27 @@ else:
 
 st.sidebar.divider()
 st.sidebar.header("📁 Veri Kaynağı")
-data_source = st.sidebar.radio("Kaynak Seçimi:", ["Parfüm ERP Örnek Verisi", "Excel/CSV Yükle"])
+data_source = st.sidebar.radio("Kaynak Seçimi:", ["Örnek ERP Verisi Kullan", "Excel/CSV Yükle"])
 
 if data_source == "Excel/CSV Yükle":
     uploaded_file = st.sidebar.file_uploader("Excel veya CSV Seç", type=["xlsx", "csv"])
     if uploaded_file:
         df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith(".csv") else pd.read_excel(uploaded_file)
     else:
-        st.info("Lütfen parfüm tedarikçi veri dosyasını yükleyin.")
+        st.info("Lütfen bir tedarikçi veri dosyası yükleyin.")
         st.stop()
 else:
     df = get_sample_data()
 
-# Kategori Filtresi
-if "Kategori" in df.columns:
-    categories_list = ["Tümü"] + sorted(list(df["Kategori"].unique()))
-    selected_cat = st.sidebar.selectbox("🌸 Hammadde / Malzeme Grubu:", categories_list)
-    if selected_cat != "Tümü":
-        df = df[df["Kategori"] == selected_cat].reset_index(drop=True)
-
 # Örnek Şablon İndirme Butonu
 template_io = io.BytesIO()
 with pd.ExcelWriter(template_io, engine='openpyxl') as writer:
-    get_sample_data().to_excel(writer, index=False, sheet_name='Parfum_Sablon')
+    get_sample_data().to_excel(writer, index=False, sheet_name='Sablon')
 
 st.sidebar.download_button(
-    label="📄 Parfüm Excel Şablonunu İndir",
+    label="📄 Örnek Excel Şablonunu İndir",
     data=template_io.getvalue(),
-    file_name="Parfum_Tedarikci_Sablonu.xlsx",
+    file_name="Tedarikci_Sablonu.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
 
@@ -153,7 +138,7 @@ st.sidebar.markdown(
     <div style='background-color: rgba(128, 128, 128, 0.1); padding: 12px; border-radius: 8px; text-align: center;'>
         <p style='margin: 0; font-size: 13px; font-weight: bold;'>Developed by</p>
         <p style='margin: 0; font-size: 18px; color: #FF4B4B; font-weight: 800;'>⚡ miyaetp</p>
-        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v2.3.0 • Perfume Quality Suite</p>
+        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v2.4.0 • Enterprise Suite</p>
     </div>
     """,
     unsafe_allow_html=True
@@ -182,34 +167,34 @@ def calculate_scores(dataframe):
 
 analyzed_df = calculate_scores(df)
 
-# Yapay Zeka Karar Motoru (Parfüm Odaklı)
+# Yapay Zeka Karar Motoru
 def generate_ai_insight(row):
     reasons = []
-    if row["Ret Oranı (%)"] >= 3.0: reasons.append("Yüksek ret / laboratuvar sapması")
-    if row["Ortalama Teslim Gecikmesi (Gün)"] >= 3.0: reasons.append("Dolum hattını aksatan gecikme")
-    if row["Uygunsuzluk Sayısı"] >= 4: reasons.append("Kritik sızdırmazlık/fiziksel kusur")
-    if row["Belge Eksikliği (%)"] >= 2.0: reasons.append("IFRA/CoA/MSDS sertifika eksikliği")
+    if row["Ret Oranı (%)"] >= 3.0: reasons.append("Yüksek ret oranı")
+    if row["Ortalama Teslim Gecikmesi (Gün)"] >= 3.0: reasons.append("Teslim gecikmesi")
+    if row["Uygunsuzluk Sayısı"] >= 4: reasons.append("Sık uygunsuzluk")
+    if row["Belge Eksikliği (%)"] >= 2.0: reasons.append("Belge eksikliği")
 
     if row["Performans Skoru"] >= 85:
-        return "🟢 Onaylı Parfüm Tedarikçisi: Kalite kararlılığı yüksek, satın alma kotası artırılabilir."
+        return "🟢 Onaylı Tedarikçi: Kalite kararlılığı yüksek, öncelikli tercih edilmeli."
     elif row["Performans Skoru"] >= 65:
-        detail = ", ".join(reasons) if reasons else "Parametrelerde hafif dalgalanma"
-        return f"🟡 Sıkı Takip: {detail} nedeniyle şarj bazlı çift kontrol uygulanmalı."
+        detail = ", ".join(reasons) if reasons else "Parametrelerde dalgalanma"
+        return f"🟡 Sıkı Takip: {detail} nedeniyle performans takibi yapılmalı."
     else:
-        detail = ", ".join(reasons) if reasons else "Kritik kozmetik kalite eşikleri aşıldı"
-        return f"🔴 Riskli Tedarikçi: {detail}. Acil 8D DÖF talep edilmeli veya alternatif onaylanmalı."
+        detail = ", ".join(reasons) if reasons else "Kritik limitler aşıldı"
+        return f"🔴 Riskli Tedarikçi: {detail}. Acil 8D DÖF talep edilmeli veya alternatif firma değerlendirilmeli."
 
 analyzed_df["YZ Karar Destek"] = analyzed_df.apply(generate_ai_insight, axis=1)
 
 # ÜST BAŞLIK VE METRİKLER
-st.title("🌸 Parfüm & Kozmetik Tedarikçi Kalite Kontrol Sistemi")
-st.caption("Esans, Kozmetik Alkol, Cam Şişe, Valf & Lüks Ambalaj Kalite Yönetimi")
+st.title("📊 Tedarikçi Kalite & Performans Karar Sistemi")
+st.caption("Veri Odaklı Kalite Kontrol, Satın Alma Stratejisi ve Aksiyon Yönetimi")
 
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("Genel Kalite Skoru", f"{analyzed_df['Performans Skoru'].mean():.1f} / 100")
 col2.metric("Ortalama Ret Oranı", f"%{analyzed_df['Ret Oranı (%)'].mean():.1f}")
-col3.metric("Sertifika/Belge Eksikliği", f"%{analyzed_df['Belge Eksikliği (%)'].mean():.1f}")
-col4.metric("Ort. Sevkiyat Gecikmesi", f"{analyzed_df['Ortalama Teslim Gecikmesi (Gün)'].mean():.1f} Gün")
+col3.metric("Ort. Belge Eksikliği", f"%{analyzed_df['Belge Eksikliği (%)'].mean():.1f}")
+col4.metric("Ort. Teslim Gecikmesi", f"{analyzed_df['Ortalama Teslim Gecikmesi (Gün)'].mean():.1f} Gün")
 
 st.divider()
 
@@ -244,8 +229,8 @@ with tab1:
 
 # SEKME 2: HARCAMA VS RISK MATRİSİ
 with tab2:
-    st.subheader("🎯 Hammadde Harcama ve Kalite Risk Matrisi")
-    st.caption("Yüksek bütçeli esans ve şişe alımlarında kalite riskini anında tespit edin.")
+    st.subheader("🎯 Harcama ve Kalite Risk Matrisi")
+    st.caption("Yüksek bütçeli alımlarda kalite riskini anında tespit edin.")
     if "Yıllık Harcama (Bin TL)" in analyzed_df.columns:
         fig_scatter = px.scatter(
             analyzed_df,
@@ -267,14 +252,14 @@ with tab2:
 # SEKME 3: WHAT-IF SİMÜLATÖRÜ
 with tab3:
     st.subheader("🔮 'What-If' Kalite İyileştirme Simülatörü")
-    st.caption("Tedarikçi sızdırmazlık veya IFRA sertifika süreçlerini düzelttiğinde puanının değişimini simüle edin.")
+    st.caption("Tedarikçi kriterlerini iyileştirdiğinde puanının değişimini simüle edin.")
     
-    sim_supplier = st.selectbox("Simüle Edilecek Parfüm Tedarikçisi:", analyzed_df["Tedarikçi"].unique())
+    sim_supplier = st.selectbox("Simüle Edilecek Tedarikçi:", analyzed_df["Tedarikçi"].unique())
     sim_row = analyzed_df[analyzed_df["Tedarikçi"] == sim_supplier].iloc[0]
     
     col_w1, col_w2, col_w3, col_w4 = st.columns(4)
     new_ret = col_w1.slider("Hedef Ret Oranı (%)", 0.0, 8.0, float(sim_row["Ret Oranı (%)"]), 0.1)
-    new_belge = col_w2.slider("Hedef Sertifika Eksikliği (%)", 0.0, 8.0, float(sim_row["Belge Eksikliği (%)"]), 0.1)
+    new_belge = col_w2.slider("Hedef Belge Eksikliği (%)", 0.0, 8.0, float(sim_row["Belge Eksikliği (%)"]), 0.1)
     new_uyg = col_w3.slider("Hedef Uygunsuzluk Sayısı", 0, 10, int(sim_row["Uygunsuzluk Sayısı"]), 1)
     new_teslim = col_w4.slider("Hedef Gecikme (Gün)", 0.0, 8.0, float(sim_row["Ortalama Teslim Gecikmesi (Gün)"]), 0.1)
     
@@ -306,7 +291,7 @@ with tab4:
         row1 = analyzed_df[analyzed_df["Tedarikçi"] == s1].iloc[0]
         row2 = analyzed_df[analyzed_df["Tedarikçi"] == s2].iloc[0]
 
-        categories = ['Düşük Ret (Organoleptik/Lab)', 'IFRA/Sertifika Tamlığı', 'Fiziksel Kalite & Sızdırmazlık', 'Termin Sadakati']
+        categories = ['Düşük Ret Başarısı', 'Belge/Sertifika Tamlığı', 'Kalite Uygunluğu', 'Termin Sadakati']
         val1 = [max(0, 100 - row1['Ret Oranı (%)'] * 12), max(0, 100 - row1['Belge Eksikliği (%)'] * 18), max(0, 100 - row1['Uygunsuzluk Sayısı'] * 12), max(0, 100 - row1['Ortalama Teslim Gecikmesi (Gün)'] * 15)]
         val2 = [max(0, 100 - row2['Ret Oranı (%)'] * 12), max(0, 100 - row2['Belge Eksikliği (%)'] * 18), max(0, 100 - row2['Uygunsuzluk Sayısı'] * 12), max(0, 100 - row2['Ortalama Teslim Gecikmesi (Gün)'] * 15)]
 
@@ -334,8 +319,8 @@ with tab5:
 
 # SEKME 6: RESMİ DÖF & İHTAR MEKTUBU
 with tab6:
-    st.subheader("📄 Resmi Parfüm Kalite DÖF / İhtar Mektubu Üretici")
-    st.caption("Uygunsuzluk tespit edilen hammadde veya ambalaj firmasına resmi 8D bildirim taslağı hazırlayın.")
+    st.subheader("📄 Resmi Kalite DÖF / İhtar Mektubu Üretici")
+    st.caption("Uygunsuzluk tespit edilen tedarikçiye resmi 8D bildirim taslağı hazırlayın.")
     
     selected_for_dof = st.selectbox("İhtar / DÖF Talebi Gönderilecek Firma:", supplier_list, key="dof_select")
     dof_row = analyzed_df[analyzed_df["Tedarikçi"] == selected_for_dof].iloc[0]
@@ -344,44 +329,43 @@ with tab6:
     letter_text = f"""SAYIN {selected_for_dof.upper()} KALİTE GÜVENCE MÜDÜRLÜĞÜNE,
 
 Tarih: {today_str}
-Malzeme Grubu: {dof_row['Kategori']}
-Konu: Parfüm Hammadde/Ambalaj Kalite Uygunsuzluğu ve 8D DÖF Talebi
+Konu: Tedarikçi Kalite Uygunsuzluğu ve 8D DÖF Talebi
 
-Fabrikamız Giriş Kalite Kontrol ve Parfüm Laboratuvarı tarafından yapılan dönemsel test ve analizlerde firmanızın genel kalite skoru 100 üzerinden {dof_row['Performans Skoru']} olarak ölçülmüştür.
+Fabrikamız Giriş Kalite Kontrol Departmanı tarafından yapılan dönemsel test ve analizlerde firmanızın genel kalite skoru 100 üzerinden {dof_row['Performans Skoru']} olarak ölçülmüştür.
 
 Tespit Edilen Uygunsuzluk Parametreleri:
-- Giriş Kontrol / Laboratuvar Ret Oranı: %{dof_row['Ret Oranı (%)']} (Kozmetik Kabul Limiti: <%1.5)
-- IFRA / CoA / GC-MS Belge Eksikliği: %{dof_row['Belge Eksikliği (%)']}
-- Kayıtlı Fiziksel/Sızdırmazlık Kusur Sayısı: {int(dof_row['Uygunsuzluk Sayısı'])} Adet
+- Giriş Kontrol / Laboratuvar Ret Oranı: %{dof_row['Ret Oranı (%)']} (Kabul Limiti: <%1.5)
+- Belge / Sertifika Eksikliği: %{dof_row['Belge Eksikliği (%)']}
+- Kayıtlı Kalite Kusur Sayısı: {int(dof_row['Uygunsuzluk Sayısı'])} Adet
 - Ortalama Sevkiyat Gecikmesi: {dof_row['Ortalama Teslim Gecikmesi (Gün)']} Gün
 
-Dolum ve üretim hatlarımızın sürekliliği ile marka kalite standartlarımız açısından, tespit edilen uygunsuzluklara ilişkin kök neden analizinin ve 8D Düzeltici-Önleyici Faaliyet planınızın 5 (beş) iş günü içinde kalite departmanımıza iletilmesini rica ederiz.
+Üretim hatlarımızın sürekliliği ve kalite standartlarımız açısından, tespit edilen uygunsuzluklara ilişkin kök neden analizinin ve 8D Düzeltici-Önleyici Faaliyet planınızın 5 (beş) iş günü içinde kalite departmanımıza iletilmesini rica ederiz.
 
-Parfüm Üretim & Kalite Güvence Direktörlüğü
+Kalite Güvence Direktörlüğü
 miyaetp Quality Intelligence System
 """
     st.text_area("Oluşturulan Resmi Bildirim Metni:", letter_text, height=260)
     st.download_button(
         label="📥 DÖF Mektubunu İndir (.txt)",
         data=letter_text,
-        file_name=f"Parfum_DOF_{selected_for_dof}.txt",
+        file_name=f"DOF_{selected_for_dof}.txt",
         mime="text/plain"
     )
 
 st.divider()
 
 # --- TABLO VE DIŞA AKTARMA ---
-st.subheader("📋 Detaylı Parfüm Kalite Değerlendirme Tablosu")
+st.subheader("📋 Detaylı Tedarikçi Kalite Değerlendirme Tablosu")
 display_df = analyzed_df.sort_values(by="Performans Skoru", ascending=False)
 st.dataframe(display_df, use_container_width=True)
 
 excel_out = io.BytesIO()
 with pd.ExcelWriter(excel_out, engine='openpyxl') as writer:
-    display_df.to_excel(writer, index=False, sheet_name='Parfum_Kalite_Analizi')
+    display_df.to_excel(writer, index=False, sheet_name='Kalite_Analizi')
 
 st.download_button(
-    label="📥 Parfüm Kalite Raporunu Excel Olarak İndir",
+    label="📥 Kalite Raporunu Excel Olarak İndir",
     data=excel_out.getvalue(),
-    file_name="Parfum_Tedarikci_Kalite_Raporu.xlsx",
+    file_name="Tedarikci_Kalite_Raporu.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
