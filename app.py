@@ -1,10 +1,11 @@
 import io
+import datetime
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-# Sayfa Yapılandırması
+# 1. Sayfa Yapılandırması
 st.set_page_config(
     page_title="Tedarikçi Analiz Sistemi | miyaetp",
     page_icon="⚡",
@@ -13,7 +14,7 @@ st.set_page_config(
 
 # Üst Başlık
 st.title("📊 Yapay Zekâ Destekli Tedarikçi Performans Dashboard'u")
-st.caption("Veri Destekli Tedarikçi Değerlendirme ve Satın Alma Karar Sistemi")
+st.caption("Veri Destekli Satın Alma, Kalite Değerlendirme ve Aksiyon Yönetim Sistemi")
 
 # --- SOL MENÜ (SIDEBAR) ---
 st.sidebar.header("⚙️ Değerlendirme Ağırlıkları (%)")
@@ -72,7 +73,7 @@ st.sidebar.markdown(
     <div style='background-color: rgba(128, 128, 128, 0.1); padding: 12px; border-radius: 8px; text-align: center;'>
         <p style='margin: 0; font-size: 13px; font-weight: bold;'>Developed by</p>
         <p style='margin: 0; font-size: 18px; color: #FF4B4B; font-weight: 800;'>⚡ miyaetp</p>
-        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v1.2.0 • AI Decision System</p>
+        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v1.3.0 • AI & Decision Support</p>
     </div>
     """,
     unsafe_allow_html=True
@@ -129,9 +130,14 @@ col4.metric("Ort. Gecikme", f"{analyzed_df['Ortalama Teslim Gecikmesi (Gün)'].m
 
 st.divider()
 
-# Grafikler
-tab1, tab2 = st.tabs(["📊 Genel Sıralama & Ağırlıklar", "🎯 Tedarikçi Radar Analizi"])
+# --- SEKMELER (TABS) ---
+tab1, tab2, tab3 = st.tabs([
+    "📊 Genel Sıralama & Ağırlıklar",
+    "⚔️ İki Tedarikçi Karşılaştırması",
+    "📄 Otomatik DÖF & İhtar Mektubu"
+])
 
+# SEKME 1: GENEL SIRALAMA
 with tab1:
     col_chart, col_pie = st.columns([3, 2])
     with col_chart:
@@ -150,31 +156,102 @@ with tab1:
         fig_pie.update_layout(height=350, margin=dict(l=20, r=20, t=20, b=20))
         st.plotly_chart(fig_pie, use_container_width=True)
 
+# SEKME 2: İKİ TEDARİKÇİ KIYASLAMA
 with tab2:
-    selected_supplier = st.selectbox("Radar Grafiği İçin Tedarikçi Seç:", analyzed_df["Tedarikçi"].unique())
-    sup_data = analyzed_df[analyzed_df["Tedarikçi"] == selected_supplier].iloc[0]
+    st.subheader("⚔️ Birebir Yetkinlik Kıyaslaması (Head-to-Head)")
+    supplier_list = list(analyzed_df["Tedarikçi"].unique())
     
-    categories = ['Düşük Ret Başarısı', 'Belge Tamlığı', 'Kalite Uygunluğu', 'Zamanında Teslim']
-    # 0-100 normalizasyonu
-    values = [
-        100 - min(sup_data['Ret Oranı (%)'] * 10, 100),
-        100 - min(sup_data['Belge Eksikliği (%)'] * 15, 100),
-        100 - min(sup_data['Uygunsuzluk Sayısı'] * 10, 100),
-        100 - min(sup_data['Ortalama Teslim Gecikmesi (Gün)'] * 15, 100)
-    ]
+    col_s1, col_s2 = st.columns(2)
+    with col_s1:
+        s1 = st.selectbox("1. Tedarikçiyi Seçin:", supplier_list, index=0)
+    with col_s2:
+        s2 = st.selectbox("2. Tedarikçiyi Seçin:", supplier_list, index=min(1, len(supplier_list)-1))
+
+    if s1 and s2:
+        row1 = analyzed_df[analyzed_df["Tedarikçi"] == s1].iloc[0]
+        row2 = analyzed_df[analyzed_df["Tedarikçi"] == s2].iloc[0]
+
+        categories = ['Düşük Ret Oranı', 'Belge Eksiksizliği', 'Kalite Uygunluğu', 'Zamanında Teslim']
+        
+        # 0-100 ölçeğinde başarı puanı (ters orantı normalize)
+        val1 = [
+            max(0, 100 - row1['Ret Oranı (%)'] * 10),
+            max(0, 100 - row1['Belge Eksikliği (%)'] * 15),
+            max(0, 100 - row1['Uygunsuzluk Sayısı'] * 10),
+            max(0, 100 - row1['Ortalama Teslim Gecikmesi (Gün)'] * 15)
+        ]
+        val2 = [
+            max(0, 100 - row2['Ret Oranı (%)'] * 10),
+            max(0, 100 - row2['Belge Eksikliği (%)'] * 15),
+            max(0, 100 - row2['Uygunsuzluk Sayısı'] * 10),
+            max(0, 100 - row2['Ortalama Teslim Gecikmesi (Gün)'] * 15)
+        ]
+
+        # Radar Grafiği
+        fig_compare = go.Figure()
+        fig_compare.add_trace(go.Scatterpolar(
+            r=val1, theta=categories, fill='toself', name=s1, line=dict(color='#00CC96')
+        ))
+        fig_compare.add_trace(go.Scatterpolar(
+            r=val2, theta=categories, fill='toself', name=s2, line=dict(color='#EF553B')
+        ))
+        fig_compare.update_layout(
+            polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
+            height=380, margin=dict(l=40, r=40, t=30, b=30)
+        )
+        st.plotly_chart(fig_compare, use_container_width=True)
+
+        # Karşılaştırma Özeti
+        col_res1, col_res2 = st.columns(2)
+        with col_res1:
+            st.info(f"**{s1}** — Toplam Skor: **{row1['Performans Skoru']} / 100**\n\n{row1['YZ Karar Destek']}")
+        with col_res2:
+            st.info(f"**{s2}** — Toplam Skor: **{row2['Performans Skoru']} / 100**\n\n{row2['YZ Karar Destek']}")
+
+# SEKME 3: OTOMATİK DÖF VE İHTAR MEKTUBU
+with tab3:
+    st.subheader("📄 Düzeltici Önleyici Faaliyet (DÖF) & İhtar Mektubu Üretici")
+    st.caption("Performansı hedefin altında kalan firmalara resmi kalite mektubu oluşturun.")
     
-    fig_radar = go.Figure(data=go.Scatterpolar(
-        r=values, theta=categories, fill='toself', line_color='#FF4B4B'
-    ))
-    fig_radar.update_layout(
-        polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
-        showlegend=False, height=350, margin=dict(l=40, r=40, t=20, b=20)
+    selected_for_dof = st.selectbox("İhtar/DÖF Hazırlanacak Firma:", supplier_list)
+    dof_row = analyzed_df[analyzed_df["Tedarikçi"] == selected_for_dof].iloc[0]
+    
+    today_str = datetime.date.today().strftime("%d.%m.%Y")
+    
+    # Mektup Taslağı
+    letter_text = f"""SAYIN {selected_for_dof.upper()} YETKİLİSİ,
+
+Tarih: {today_str}
+Konu: Dönemsel Tedarikçi Performans Değerlendirmesi ve Kalite İyileştirme Talebi
+
+Kalite Güvence ve Satın Alma Departmanlarımız tarafından yapılan dönemsel performans analizleri neticesinde firmanızın genel performans skoru 100 üzerinden {dof_row['Performans Skoru']} olarak belirlenmiştir.
+
+Değerlendirme sonucunda tespit edilen kritik kalite ve lojistik uygunsuzluklar aşağıda bilginize sunulmuştur:
+- Ret Oranı: %{dof_row['Ret Oranı (%)']} (Kritik Eşik: <%2.0)
+- Belge Eksikliği Oranı: %{dof_row['Belge Eksikliği (%)']} (Kritik Eşik: <%1.0)
+- Kayıtlı Kalite Uygunsuzluk Sayısı: {int(dof_row['Uygunsuzluk Sayısı'])} Adet
+- Ortalama Teslimat Gecikmesi: {dof_row['Ortalama Teslim Gecikmesi (Gün)']} Gün
+
+Mevcut aksaklıkların giderilmesi, kök neden analizinin yapılması ve 8D formatında hazırlanacak Düzeltici ve Önleyici Faaliyet (DÖF) planının 5 (beş) iş günü içerisinde tarafımıza iletilmesini rica ederiz. 
+
+Gerekli iyileştirmelerin sağlanamaması durumunda satın alma kotalarında kısıtlamaya gidilebileceğini bilgilerinize sunar, iş birliğiniz için teşekkür ederiz.
+
+Saygılarımızla,
+Kalite Güvence & Satın Alma Yönetimi
+miyaetp Kalite Karar Destek Sistemi
+"""
+    st.text_area("Oluşturulan Resmi Bildirim Metni:", letter_text, height=280)
+    
+    st.download_button(
+        label="📥 DÖF Mektubunu İndir (.txt)",
+        data=letter_text,
+        file_name=f"DOF_Talebi_{selected_for_dof}.txt",
+        mime="text/plain"
     )
-    st.plotly_chart(fig_radar, use_container_width=True)
 
 st.divider()
 
-# Tablo ve Çıktı
+# --- TABLO VE ÇIKTI ---
 st.subheader("📋 Detaylı Analiz & Karar Tablosu")
 display_df = analyzed_df.sort_values(by="Performans Skoru", ascending=False)
 st.dataframe(display_df, use_container_width=True)
@@ -184,7 +261,7 @@ with pd.ExcelWriter(excel_out, engine='openpyxl') as writer:
     display_df.to_excel(writer, index=False, sheet_name='Analiz')
 
 st.download_button(
-    label="📥 Tam Analiz Raporunu Excel İndir",
+    label="📥 Tam Analiz Raporunu Excel Olarak İndir",
     data=excel_out.getvalue(),
     file_name="Tedarikci_Analiz_Raporu.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
