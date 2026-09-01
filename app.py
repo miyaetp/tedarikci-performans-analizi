@@ -12,7 +12,45 @@ st.set_page_config(
     layout="wide"
 )
 
-# Üst Başlık
+# --- 2. GÜVENLİK VE GİRİŞ EKRANI (AUTHENTICATION) ---
+SISTEM_SIFRESI = "miya123"  # İstediğin şifreyi buraya yazabilirsin
+
+if "authenticated" not in st.session_state:
+    st.session_state["authenticated"] = False
+
+def check_password():
+    if st.session_state["password_input"] == SISTEM_SIFRESI:
+        st.session_state["authenticated"] = True
+        del st.session_state["password_input"]
+    else:
+        st.error("❌ Hatalı şifre girdiniz. Lütfen tekrar deneyin.")
+
+if not st.session_state["authenticated"]:
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    col_a, col_b, col_c = st.columns([1, 1.2, 1])
+    with col_b:
+        st.markdown(
+            """
+            <div style='background-color: rgba(128, 128, 128, 0.08); padding: 30px; border-radius: 12px; text-align: center; border: 1px solid rgba(128, 128, 128, 0.2);'>
+                <h2 style='margin-bottom: 5px;'>🔒 Yetkili Girişi</h2>
+                <p style='color: gray; font-size: 14px;'>Tedarikçi Performans ve Karar Destek Paneli</p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.text_input("Giriş Şifresi:", type="password", key="password_input", on_change=check_password)
+        st.button("Giriş Yap", on_click=check_password, use_container_width=True)
+        st.caption("⚡ Developed by **miyaetp**")
+    st.stop()  # Şifre doğru girilene kadar alt kısımları çalıştırma
+
+# --- 3. ANA DASHBOARD (ŞİFRE DOĞRUYSA AÇILIR) ---
+
+# Çıkış Yap Butonu (Sidebar)
+if st.sidebar.button("🚪 Güvenli Çıkış Yap"):
+    st.session_state["authenticated"] = False
+    st.rerun()
+
 st.title("📊 Yapay Zekâ Destekli Tedarikçi Performans Dashboard'u")
 st.caption("Veri Destekli Satın Alma, Kalite Değerlendirme ve Aksiyon Yönetim Sistemi")
 
@@ -73,7 +111,7 @@ st.sidebar.markdown(
     <div style='background-color: rgba(128, 128, 128, 0.1); padding: 12px; border-radius: 8px; text-align: center;'>
         <p style='margin: 0; font-size: 13px; font-weight: bold;'>Developed by</p>
         <p style='margin: 0; font-size: 18px; color: #FF4B4B; font-weight: 800;'>⚡ miyaetp</p>
-        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v1.3.0 • AI & Decision Support</p>
+        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v1.4.0 • Secure AI System</p>
     </div>
     """,
     unsafe_allow_html=True
@@ -173,7 +211,6 @@ with tab2:
 
         categories = ['Düşük Ret Oranı', 'Belge Eksiksizliği', 'Kalite Uygunluğu', 'Zamanında Teslim']
         
-        # 0-100 ölçeğinde başarı puanı (ters orantı normalize)
         val1 = [
             max(0, 100 - row1['Ret Oranı (%)'] * 10),
             max(0, 100 - row1['Belge Eksikliği (%)'] * 15),
@@ -187,7 +224,6 @@ with tab2:
             max(0, 100 - row2['Ortalama Teslim Gecikmesi (Gün)'] * 15)
         ]
 
-        # Radar Grafiği
         fig_compare = go.Figure()
         fig_compare.add_trace(go.Scatterpolar(
             r=val1, theta=categories, fill='toself', name=s1, line=dict(color='#00CC96')
@@ -201,7 +237,6 @@ with tab2:
         )
         st.plotly_chart(fig_compare, use_container_width=True)
 
-        # Karşılaştırma Özeti
         col_res1, col_res2 = st.columns(2)
         with col_res1:
             st.info(f"**{s1}** — Toplam Skor: **{row1['Performans Skoru']} / 100**\n\n{row1['YZ Karar Destek']}")
@@ -218,7 +253,6 @@ with tab3:
     
     today_str = datetime.date.today().strftime("%d.%m.%Y")
     
-    # Mektup Taslağı
     letter_text = f"""SAYIN {selected_for_dof.upper()} YETKİLİSİ,
 
 Tarih: {today_str}
