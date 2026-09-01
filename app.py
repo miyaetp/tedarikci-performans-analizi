@@ -9,11 +9,41 @@ import plotly.graph_objects as go
 st.set_page_config(
     page_title="Tedarikçi Analiz Sistemi | miyaetp",
     page_icon="⚡",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
+# --- TÜM STREAMLIT & GITHUB REKLAM VE MENÜLERİNİ GİZLEME (ÖZEL CSS) ---
+hide_streamlit_elements = """
+    <style>
+    /* Üst menü çubuğu, hamburger menü ve renkli şerit */
+    #MainMenu {visibility: hidden; display: none !important;}
+    header {visibility: hidden; display: none !important;}
+    
+    /* Alt bilgi yazısı (Made with Streamlit) */
+    footer {visibility: hidden; display: none !important;}
+    
+    /* Streamlit Cloud rozeti, GitHub linkleri ve sağ alt butonlar */
+    .viewerBadge_container__1QSob,
+    .viewerBadge_link__1S137,
+    [data-testid="stStatusWidget"],
+    [data-testid="stToolbar"],
+    [data-testid="manage-app-button"] {
+        visibility: hidden !important;
+        display: none !important;
+    }
+    
+    /* Sayfa üst boşluğunu sıfırlama */
+    .block-container {
+        padding-top: 1.5rem !important;
+        padding-bottom: 2rem !important;
+    }
+    </style>
+"""
+st.markdown(hide_streamlit_elements, unsafe_allow_html=True)
+
 # --- 2. GÜVENLİK VE GİRİŞ EKRANI (AUTHENTICATION) ---
-SISTEM_SIFRESI = "miya123"  # İstediğin şifreyi buraya yazabilirsin
+SISTEM_SIFRESI = "miya123"  # İstediğin şifreyi buradan değiştirebilirsin
 
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
@@ -42,9 +72,9 @@ if not st.session_state["authenticated"]:
         st.text_input("Giriş Şifresi:", type="password", key="password_input", on_change=check_password)
         st.button("Giriş Yap", on_click=check_password, use_container_width=True)
         st.caption("⚡ Developed by **miyaetp**")
-    st.stop()  # Şifre doğru girilene kadar alt kısımları çalıştırma
+    st.stop()  # Şifre doğru girilene kadar dashboard yüklenmez
 
-# --- 3. ANA DASHBOARD (ŞİFRE DOĞRUYSA AÇILIR) ---
+# --- 3. ANA DASHBOARD ---
 
 # Çıkış Yap Butonu (Sidebar)
 if st.sidebar.button("🚪 Güvenli Çıkış Yap"):
@@ -111,7 +141,7 @@ st.sidebar.markdown(
     <div style='background-color: rgba(128, 128, 128, 0.1); padding: 12px; border-radius: 8px; text-align: center;'>
         <p style='margin: 0; font-size: 13px; font-weight: bold;'>Developed by</p>
         <p style='margin: 0; font-size: 18px; color: #FF4B4B; font-weight: 800;'>⚡ miyaetp</p>
-        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v1.4.0 • Secure AI System</p>
+        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v1.5.0 • Secure Enterprise System</p>
     </div>
     """,
     unsafe_allow_html=True
