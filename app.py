@@ -37,7 +37,7 @@ hide_streamlit_elements = """
 st.markdown(hide_streamlit_elements, unsafe_allow_html=True)
 
 # --- 2. GÜVENLİK VE GİRİŞ EKRANI (AUTHENTICATION) ---
-SISTEM_SIFRESI = "miya123"  # İstediğiniz şifre
+SISTEM_SIFRESI = "miya123"
 
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
@@ -124,6 +124,7 @@ if "Kategori" in df.columns:
 template_io = io.BytesIO()
 with pd.ExcelWriter(template_io, engine='openpyxl') as writer:
     get_sample_data().to_excel(writer, index=False, sheet_name='Sablon')
+
 st.sidebar.download_button(
     label="📄 Örnek Excel Şablonunu İndir",
     data=template_io.getvalue(),
@@ -307,7 +308,6 @@ with tab5:
     st.subheader("📈 Tedarikçi 6 Aylık Performans Trendi")
     trend_supplier = st.selectbox("Trend İncelemesi İçin Tedarikçi:", supplier_list)
     
-    # Sentetik 6 aylık trend verisi üretimi
     months = ["Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos"]
     base_score = analyzed_df[analyzed_df["Tedarikçi"] == trend_supplier]["Performans Skoru"].iloc[0]
     np.random.seed(abs(hash(trend_supplier)) % 10000)
@@ -351,7 +351,7 @@ with tab6:
         selected_for_dof = st.selectbox("İhtar/DÖF Hazırlanacak Firma:", supplier_list, key="dof_select")
         dof_row = analyzed_df[analyzed_df["Tedarikçi"] == selected_for_dof].iloc[0]
         today_str = datetime.date.today().strftime("%d.%m.%Y")
-        letter_text = f"""SAYIN {selected_for_dof.upper()} YETKİLİSİ,\nTarih: {today_str}\nKonu: Kalite İyileştirme ve DÖF Talebi\n\nPerformans skoru 100 üzerinden {dof_row['Performans Skoru']} olarak tespit edilmiştir.\n- Ret Oranı: %{dof_row['Ret Oranı (%)']}\n- Belge Eksikliği: %{dof_row['Belge Eksikliği (%)']}\n- Uygunsuzluk: {int(dof_row['Uygunsuzluk Sayısı'])} Adet\n- Ortalama Gecikme: {dof_row['Ortalama Teslim Gecikmesi (Gün)']} Gün\n\n5 iş günü içinde DÖF planı talep edilmektedir.\n\nKalite Güvence Yönetimi | miyaetp Decision AI"""
+        letter_text = f"SAYIN {selected_for_dof.upper()} YETKİLİSİ,\nTarih: {today_str}\nKonu: Kalite İyileştirme ve DÖF Talebi\n\nPerformans skoru 100 üzerinden {dof_row['Performans Skoru']} olarak tespit edilmiştir.\n- Ret Oranı: %{dof_row['Ret Oranı (%)']}\n- Belge Eksikliği: %{dof_row['Belge Eksikliği (%)']}\n- Uygunsuzluk: {int(dof_row['Uygunsuzluk Sayısı'])} Adet\n- Ortalama Gecikme: {dof_row['Ortalama Teslim Gecikmesi (Gün)']} Gün\n\n5 iş günü içinde DÖF planı talep edilmektedir.\n\nKalite Güvence Yönetimi | miyaetp Decision AI"
         st.text_area("Taslak:", letter_text, height=160)
         st.download_button("📥 DÖF İndir (.txt)", letter_text, file_name=f"DOF_{selected_for_dof}.txt", mime="text/plain")
 
@@ -363,4 +363,12 @@ display_df = analyzed_df.sort_values(by="Performans Skoru", ascending=False)
 st.dataframe(display_df, use_container_width=True)
 
 excel_out = io.BytesIO()
-with pd.ExcelWriter(excel_out
+with pd.ExcelWriter(excel_out, engine='openpyxl') as writer:
+    display_df.to_excel(writer, index=False, sheet_name='Analiz')
+
+st.download_button(
+    label="📥 Tam Analiz Raporunu Excel Olarak İndir",
+    data=excel_out.getvalue(),
+    file_name="Tedarikci_Analiz_Raporu.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
