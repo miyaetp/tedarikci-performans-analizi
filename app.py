@@ -318,72 +318,92 @@ if secilen_sayfa == "📊 Tedarikçi Kalite & Karar Paneli":
     st.download_button("📥 Kalite Raporunu Excel Olarak İndir", excel_out.getvalue(), "Tedarikci_Kalite_Raporu.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 # ==============================================================================
-# SAYFA 2: DİJİTAL NUMUNE TAKİP SİSTEMİ (ESNEK & BOŞLUKLARI TOLERE EDEN MOD)
+# SAYFA 2: DİJİTAL NUMUNE TAKİP SİSTEMİ (AKILLI KABUL/RED & FİRMA EŞLEŞTİRME)
 # ==============================================================================
 else:
     st.title("🧪 Dijital Numune Takip & Süreç Yönetim Sistemi")
-    st.caption("Numuneleri doğrudan kaydedin, geçmiş Excel arşivini içe aktarın ve analiz süreçlerini yönetin.")
+    st.caption("Numuneleri kaydedin, geçmiş Excel arşivini içe aktarın ve analiz süreçlerini yönetin.")
 
-    # --- ESNEK NUMUNE İÇE AKTARMA MOTORU ---
+    # --- AKILLI NUMUNE İÇE AKTARMA MOTORU ---
     with st.expander("📥 Geçmiş Numune Arşivini Excel / CSV Olarak İçe Aktar", expanded=False):
         col_up1, col_up2 = st.columns([2, 1])
         with col_up1:
             uploaded_samples = st.file_uploader("Numune Listesi Dosyası Seç (.xlsx veya .csv)", type=["xlsx", "csv"], key="numune_uploader")
             if uploaded_samples:
                 try:
-                    loaded_df = pd.read_csv(uploaded_samples) if uploaded_samples.name.endswith(".csv") else pd.read_excel(uploaded_samples)
+                    raw_df = pd.read_csv(uploaded_samples) if uploaded_samples.name.endswith(".csv") else pd.read_excel(uploaded_samples)
+                    raw_df = raw_df.dropna(how='all').reset_index(drop=True)
                     
-                    # Tamamen boş satırları temizle
-                    loaded_df = loaded_df.dropna(how='all').reset_index(drop=True)
-                    
-                    if len(loaded_df) == 0:
+                    if len(raw_df) == 0:
                         st.warning("Yüklenen dosya boş!")
                     else:
-                        # Eksik başlıkları otomatik oluştur ve varsayılan değerleri bas
+                        processed_df = pd.DataFrame()
                         bugun = datetime.date.today().strftime("%Y-%m-%d")
+
+                        # 1. Tedarikçi / Firma Kolonunu Algılama
+                        firma_cols = [c for c in raw_df.columns if any(k in str(c).lower() for k in ["tedarik", "firma", "üretici", "supplier", "vendor"])]
+                        if firma_cols:
+                            processed_df["Tedarikçi"] = raw_df[firma_cols[0]].fillna("Bilinmeyen Firma").astype(str)
+                        else:
+                            processed_df["Tedarikçi"] = raw_df.iloc[:, 0].fillna("Bilinmeyen Firma").astype(str)
+
+                        # 2. Numune Tanımı / Ürün Adı Algılama
+                        tanim_cols = [c for c in raw_df.columns if any(k in str(c).lower() for k in ["tanım", "ürün", "malzeme", "numune", "lot", "açıklama", "name", "desc"])]
+                        if tanim_cols:
+                            processed_df["Numune Tanımı"] = raw_df[tanim_cols[0]].fillna("Genel Numune").astype(str)
+                        else:
+                            processed_df["Numune Tanımı"] = "Genel Numune"
+
+                        # 3. Durum / Karar (Kabul - Red - Bekliyor) Algılama & Eşleme
+                        durum_cols = [c for c in raw_df.columns if any(k in str(c).lower() for k in ["durum", "karar", "sonuç", "status", "kabul", "ret", "onay"])]
                         
-                        if "Tedarikçi" not in loaded_df.columns:
-                            loaded_df["Tedarikçi"] = "Bilinmeyen Tedarikçi"
-                        else:
-                            loaded_df["Tedarikçi"] = loaded_df["Tedarikçi"].fillna("Bilinmeyen Tedarikçi").astype(str)
+                        def parse_status(val):
+                            v = str(val).lower().strip()
+                            if any(k in v for k in ["kabul", "onay", "uygun", "pass", "ok", "onaylandı"]):
+                                return "Kalite Onaylandı"
+                            elif any(k in v for k in ["red", "ret", "uygunsuz", "fail", "nok", "reddedildi"]):
+                                return "Reddedildi"
+                            elif any(k in v for k in ["analiz", "test", "laboratuvar", "lab"]):
+                                return "Analizde"
+                            else:
+                                return "Bekliyor"
 
-                        if "Numune Tanımı" not in loaded_df.columns:
-                            loaded_df["Numune Tanımı"] = "Genel Numune"
+                        if durum_cols:
+                            processed_df["Mevcut Durum"] = raw_df[durum_cols[0]].apply(parse_status)
                         else:
-                            loaded_df["Numune Tanımı"] = loaded_df["Numune Tanımı"].fillna("Genel Numune").astype(str)
+                            processed_df["Mevcut Durum"] = "Bekliyor"
 
-                        if "Kabul Tarihi" not in loaded_df.columns:
-                            loaded_df["Kabul Tarihi"] = bugun
+                        # 4. Tarih Kolonu Algılama
+                        tarih_cols = [c for c in raw_df.columns if any(k in str(c).lower() for k in ["tarih", "date", "kabul", "giriş"])]
+                        if tarih_cols:
+                            processed_df["Kabul Tarihi"] = raw_df[tarih_cols[0]].fillna(bugun).astype(str)
                         else:
-                            loaded_df["Kabul Tarihi"] = loaded_df["Kabul Tarihi"].fillna(bugun).astype(str)
+                            processed_df["Kabul Tarihi"] = bugun
 
-                        if "Mevcut Durum" not in loaded_df.columns:
-                            loaded_df["Mevcut Durum"] = "Bekliyor"
+                        # 5. Not Kolonu Algılama
+                        not_cols = [c for c in raw_df.columns if any(k in str(c).lower() for k in ["not", "açıklama", "yorum", "lab", "gerekçe", "neden"])]
+                        if not_cols:
+                            processed_df["Laboratuvar Notu"] = raw_df[not_cols[0]].fillna("Not girilmedi").astype(str)
                         else:
-                            loaded_df["Mevcut Durum"] = loaded_df["Mevcut Durum"].fillna("Bekliyor").astype(str)
+                            processed_df["Laboratuvar Notu"] = "Excel aktarımı ile yüklendi"
 
-                        if "Laboratuvar Notu" not in loaded_df.columns:
-                            loaded_df["Laboratuvar Notu"] = "Not girilmedi"
+                        # 6. Numune Kodu Algılama / Üretme
+                        kod_cols = [c for c in raw_df.columns if any(k in str(c).lower() for k in ["kod", "no", "id", "numune no"])]
+                        if kod_cols:
+                            processed_df["Numune Kodu"] = raw_df[kod_cols[0]].fillna("").astype(str)
+                            for idx, val in enumerate(processed_df["Numune Kodu"]):
+                                if str(val).strip() == "":
+                                    processed_df.at[idx, "Numune Kodu"] = f"NUM-2026-{idx+1:03d}"
                         else:
-                            loaded_df["Laboratuvar Notu"] = loaded_df["Laboratuvar Notu"].fillna("Not girilmedi").astype(str)
+                            processed_df["Numune Kodu"] = [f"NUM-2026-{i+1:03d}" for i in range(len(processed_df))]
 
-                        if "Numune Kodu" not in loaded_df.columns:
-                            loaded_df["Numune Kodu"] = [f"NUM-2026-{i+1:03d}" for i in range(len(loaded_df))]
-                        else:
-                            # Boş olan kodlara otomatik kod üret
-                            for idx, val in enumerate(loaded_df["Numune Kodu"]):
-                                if pd.isna(val) or str(val).strip() == "":
-                                    loaded_df.at[idx, "Numune Kodu"] = f"NUM-2026-{idx+1:03d}"
-                            loaded_df["Numune Kodu"] = loaded_df["Numune Kodu"].astype(str)
-
-                        # Standart sütun sırasına sok
-                        standart_df = loaded_df[["Numune Kodu", "Tedarikçi", "Numune Tanımı", "Kabul Tarihi", "Mevcut Durum", "Laboratuvar Notu"]]
+                        standart_df = processed_df[["Numune Kodu", "Tedarikçi", "Numune Tanımı", "Kabul Tarihi", "Mevcut Durum", "Laboratuvar Notu"]]
                         
                         col_btn1, col_btn2 = st.columns(2)
                         with col_btn1:
-                            if st.button("🔄 Tabloyu Bu Verilerle Değiştir (Sıfırla & Yükle)"):
+                            if st.button("🔄 Tabloyu Bu Verilerle Sıfırla & Yükle"):
                                 st.session_state["numuneler"] = standart_df
-                                st.success(f"{len(standart_df)} adet dolu kayıt başarıyla aktarıldı!")
+                                st.success(f"{len(standart_df)} adet numune başarıyla aktarıldı (Kabul/Red durumları otomatik ayrıldı).")
                                 st.rerun()
                         with col_btn2:
                             if st.button("➕ Mevcut Listenin Altına Ekle"):
@@ -491,7 +511,7 @@ st.sidebar.markdown(
     <div style='background-color: rgba(128, 128, 128, 0.1); padding: 12px; border-radius: 8px; text-align: center; margin-top: 20px;'>
         <p style='margin: 0; font-size: 13px; font-weight: bold;'>Developed by</p>
         <p style='margin: 0; font-size: 18px; color: #FF4B4B; font-weight: 800;'>⚡ miyaetp</p>
-        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v3.3.0 • Smart Tolerant Loader</p>
+        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v3.4.0 • Smart Parser Edition</p>
     </div>
     """,
     unsafe_allow_html=True
