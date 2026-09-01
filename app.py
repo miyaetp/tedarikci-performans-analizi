@@ -68,22 +68,85 @@ if not st.session_state["authenticated"]:
         st.caption("⚡ Developed by **miyaetp**")
     st.stop()
 
-# --- 3. NUMUNE HAFIZASI (SESSION STATE) ---
-if "numuneler" not in st.session_state:
-    st.session_state["numuneler"] = pd.DataFrame({
-        "Numune Kodu": ["NUM-2026-001", "NUM-2026-002", "NUM-2026-003", "NUM-2026-004"],
-        "Tedarikçi": ["Tedarikçi A", "Tedarikçi C", "Tedarikçi B", "Tedarikçi D"],
-        "Numune Tanımı": ["Yeni Lot Esans Numunesi", "Kozmetik Alkol Şarjı", "Cam Şişe Prototipi", "Sprey Pompa Revizyonu"],
-        "Kabul Tarihi": ["2026-08-28", "2026-08-30", "2026-08-31", "2026-09-01"],
-        "Mevcut Durum": ["Analizde", "Kalite Onaylandı", "Bekliyor", "Reddedildi"],
-        "Laboratuvar Notu": ["GC-MS ve koku testi sürüyor", "Spektroskopi testleri uygun bulundu", "Giriş test kuyruğunda", "Sızdırmazlık testinde kaçak tespit edildi"]
-    })
+# --- 3. FABRİKA KALİTE NUMUNE ŞABLON YAPISI ---
+KALITE_KOLONLARI = [
+    "HAMMADDE ADI",
+    "FİRMA İSMİ",
+    "LOT NO",
+    "TARİH",
+    "SERTİFİKA KONTROLÜ / ANALİZ YAPAN",
+    "AMBALAJ TEMİZLİĞİ",
+    "ETİKET UYGUNLUK",
+    "KABUL - RED",
+    "MENŞEİ (ÜRETİM YERİ)",
+    "RUBY ANALİZ DURUMU",
+    "COA",
+    "RUBY TDS",
+    "RUBY SDS",
+    "ORJİN (KAYNAK)",
+    "DOĞAL / REACH NO"
+]
 
-# --- 4. TEDARİKÇİ VERİLERİ ---
+if "numuneler" not in st.session_state:
+    st.session_state["numuneler"] = pd.DataFrame([
+        {
+            "HAMMADDE ADI": "Oud Wood Esans",
+            "FİRMA İSMİ": "Grasse Fragrance Ltd.",
+            "LOT NO": "LOT-2026-088",
+            "TARİH": "2026-08-28",
+            "SERTİFİKA KONTROLÜ / ANALİZ YAPAN": "Uygun / Ahmet K.",
+            "AMBALAJ TEMİZLİĞİ": "Temiz - Uygun",
+            "ETİKET UYGUNLUK": "Uygun",
+            "KABUL - RED": "KABUL",
+            "MENŞEİ (ÜRETİM YERİ)": "Fransa",
+            "RUBY ANALİZ DURUMU": "Tamamlandı",
+            "COA": "Var",
+            "RUBY TDS": "Mevcut",
+            "RUBY SDS": "Mevcut",
+            "ORJİN (KAYNAK)": "Sentetik/Doğal Karışım",
+            "DOĞAL / REACH NO": "REACH-092831"
+        },
+        {
+            "HAMMADDE ADI": "Kozmetik Denatüre Alkol %96",
+            "FİRMA İSMİ": "Etanol Kimya Sanayi",
+            "LOT NO": "LOT-2026-104",
+            "TARİH": "2026-08-30",
+            "SERTİFİKA KONTROLÜ / ANALİZ YAPAN": "GC-MS Testi / Mehmet A.",
+            "AMBALAJ TEMİZLİĞİ": "Varil Temiz",
+            "ETİKET UYGUNLUK": "Uygun",
+            "KABUL - RED": "KABUL",
+            "MENŞEİ (ÜRETİM YERİ)": "Türkiye",
+            "RUBY ANALİZ DURUMU": "Onaylandı",
+            "COA": "Var",
+            "RUBY TDS": "Mevcut",
+            "RUBY SDS": "Mevcut",
+            "ORJİN (KAYNAK)": "Tarımsal Etanol",
+            "DOĞAL / REACH NO": "REACH-883102"
+        },
+        {
+            "HAMMADDE ADI": "100ml Lüks Cam Şişe",
+            "FİRMA İSMİ": "Vetro Ambalaj A.Ş.",
+            "LOT NO": "LOT-2026-310",
+            "TARİH": "2026-09-01",
+            "SERTİFİKA KONTROLÜ / ANALİZ YAPAN": "Sızdırmazlık / Selin Y.",
+            "AMBALAJ TEMİZLİĞİ": "Koli Deforme",
+            "ETİKET UYGUNLUK": "Eksik Lot Yazısı",
+            "KABUL - RED": "RED",
+            "MENŞEİ (ÜRETİM YERİ)": "İtalya",
+            "RUBY ANALİZ DURUMU": "Kaçak Tespit Edildi",
+            "COA": "Yok",
+            "RUBY TDS": "Eksik",
+            "RUBY SDS": "Mevcut Değil",
+            "ORJİN (KAYNAK)": "Cam",
+            "DOĞAL / REACH NO": "-"
+        }
+    ])
+
+# --- 4. TEDARİKÇİ ERP VERİLERİ ---
 @st.cache_data
 def get_sample_data():
     return pd.DataFrame({
-        "Tedarikçi": ["Tedarikçi A", "Tedarikçi B", "Tedarikçi C", "Tedarikçi D", "Tedarikçi E", "Tedarikçi F"],
+        "Tedarikçi": ["Grasse Fragrance Ltd.", "Etanol Kimya Sanayi", "Vetro Ambalaj A.Ş.", "AeroSpray Valf", "Zamak Manyetik Kapak", "Prestige Kutu"],
         "Yıllık Harcama (Bin TL)": [9500, 3800, 5200, 2100, 2800, 1650],
         "Ret Oranı (%)": [0.8, 1.5, 3.8, 4.5, 1.2, 2.0],
         "Belge Eksikliği (%)": [0.2, 0.5, 2.1, 3.2, 0.9, 1.1],
@@ -91,7 +154,7 @@ def get_sample_data():
         "Ortalama Teslim Gecikmesi (Gün)": [1.0, 1.2, 3.5, 4.0, 1.8, 2.0]
     })
 
-# --- SOL MENÜ (SIDEBAR) SAYFA NAVİGASYONU ---
+# --- SOL MENÜ (SIDEBAR) ---
 if st.sidebar.button("🚪 Güvenli Çıkış Yap"):
     st.session_state["authenticated"] = False
     st.rerun()
@@ -99,7 +162,7 @@ if st.sidebar.button("🚪 Güvenli Çıkış Yap"):
 st.sidebar.title("📌 Modül / Sayfa Seçimi")
 secilen_sayfa = st.sidebar.radio(
     "Gitmek İstediğiniz Sayfayı Seçin:",
-    ["📊 Tedarikçi Kalite & Karar Paneli", "🧪 Dijital Numune Takip Sistemi"]
+    ["📊 Tedarikçi Kalite & Karar Paneli", "🧪 Canlı Numune Takip Sistemi"]
 )
 st.sidebar.divider()
 
@@ -318,17 +381,17 @@ if secilen_sayfa == "📊 Tedarikçi Kalite & Karar Paneli":
     st.download_button("📥 Kalite Raporunu Excel Olarak İndir", excel_out.getvalue(), "Tedarikci_Kalite_Raporu.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 # ==============================================================================
-# SAYFA 2: DİJİTAL NUMUNE TAKİP SİSTEMİ (AKILLI KABUL/RED & FİRMA EŞLEŞTİRME)
+# SAYFA 2: CANLI NUMUNE TAKİP SİSTEMİ (15 SÜTUNLU FABRİKA FORMATI)
 # ==============================================================================
 else:
-    st.title("🧪 Dijital Numune Takip & Süreç Yönetim Sistemi")
-    st.caption("Numuneleri kaydedin, geçmiş Excel arşivini içe aktarın ve analiz süreçlerini yönetin.")
+    st.title("🧪 Canlı Numune & Hammadde Kalite Takip Sistemi")
+    st.caption("Fabrika Giriş Kalite Kontrol Şablonuna Uygun Numune Kabul, Analiz ve Kabul/Red Yönetimi")
 
-    # --- AKILLI NUMUNE İÇE AKTARMA MOTORU ---
-    with st.expander("📥 Geçmiş Numune Arşivini Excel / CSV Olarak İçe Aktar", expanded=False):
+    # --- ESNEK VE TAM EŞLEŞTİRMELİ EXCEL YÜKLEME ALANI ---
+    with st.expander("📥 Kalite Kontrol Excel Listesini İçe Aktar", expanded=False):
         col_up1, col_up2 = st.columns([2, 1])
         with col_up1:
-            uploaded_samples = st.file_uploader("Numune Listesi Dosyası Seç (.xlsx veya .csv)", type=["xlsx", "csv"], key="numune_uploader")
+            uploaded_samples = st.file_uploader("Numune Excel Dosyası Seç (.xlsx veya .csv)", type=["xlsx", "csv"], key="numune_uploader")
             if uploaded_samples:
                 try:
                     raw_df = pd.read_csv(uploaded_samples) if uploaded_samples.name.endswith(".csv") else pd.read_excel(uploaded_samples)
@@ -340,168 +403,226 @@ else:
                         processed_df = pd.DataFrame()
                         bugun = datetime.date.today().strftime("%Y-%m-%d")
 
-                        # 1. Tedarikçi / Firma Kolonunu Algılama
-                        firma_cols = [c for c in raw_df.columns if any(k in str(c).lower() for k in ["tedarik", "firma", "üretici", "supplier", "vendor"])]
-                        if firma_cols:
-                            processed_df["Tedarikçi"] = raw_df[firma_cols[0]].fillna("Bilinmeyen Firma").astype(str)
-                        else:
-                            processed_df["Tedarikçi"] = raw_df.iloc[:, 0].fillna("Bilinmeyen Firma").astype(str)
+                        # Sütunları Büyük Harfe Çevirerek Esnek Arama Fonksiyonu
+                        def find_column(patterns):
+                            for col in raw_df.columns:
+                                col_clean = str(col).upper().replace("İ", "I").replace("I", "I").strip()
+                                for p in patterns:
+                                    p_clean = p.upper().replace("İ", "I").replace("I", "I").strip()
+                                    if p_clean in col_clean:
+                                        return col
+                            return None
 
-                        # 2. Numune Tanımı / Ürün Adı Algılama
-                        tanim_cols = [c for c in raw_df.columns if any(k in str(c).lower() for k in ["tanım", "ürün", "malzeme", "numune", "lot", "açıklama", "name", "desc"])]
-                        if tanim_cols:
-                            processed_df["Numune Tanımı"] = raw_df[tanim_cols[0]].fillna("Genel Numune").astype(str)
-                        else:
-                            processed_df["Numune Tanımı"] = "Genel Numune"
+                        # 1. HAMMADDE ADI
+                        col = find_column(["HAMMADDE", "URUN", "MALZEME", "NUMUNE ADI", "NAME"])
+                        processed_df["HAMMADDE ADI"] = raw_df[col].fillna("Genel Hammadde").astype(str) if col else "Genel Hammadde"
 
-                        # 3. Durum / Karar (Kabul - Red - Bekliyor) Algılama & Eşleme
-                        durum_cols = [c for c in raw_df.columns if any(k in str(c).lower() for k in ["durum", "karar", "sonuç", "status", "kabul", "ret", "onay"])]
-                        
-                        def parse_status(val):
-                            v = str(val).lower().strip()
-                            if any(k in v for k in ["kabul", "onay", "uygun", "pass", "ok", "onaylandı"]):
-                                return "Kalite Onaylandı"
-                            elif any(k in v for k in ["red", "ret", "uygunsuz", "fail", "nok", "reddedildi"]):
-                                return "Reddedildi"
-                            elif any(k in v for k in ["analiz", "test", "laboratuvar", "lab"]):
-                                return "Analizde"
+                        # 2. FİRMA İSMİ
+                        col = find_column(["FIRMA", "TEDARIK", "URETICI", "SUPPLIER", "VENDOR"])
+                        processed_df["FİRMA İSMİ"] = raw_df[col].fillna("Bilinmeyen Firma").astype(str) if col else "Bilinmeyen Firma"
+
+                        # 3. LOT NO
+                        col = find_column(["LOT", "SARJ", "BATCH", "PARTI"])
+                        processed_df["LOT NO"] = raw_df[col].fillna("-").astype(str) if col else "-"
+
+                        # 4. TARİH
+                        col = find_column(["TARIH", "DATE", "GIRIS", "KABUL TARIHI"])
+                        processed_df["TARİH"] = raw_df[col].fillna(bugun).astype(str) if col else bugun
+
+                        # 5. SERTİFİKA KONTROLÜ / ANALİZ YAPAN
+                        col = find_column(["SERTIFIKA KONTROLU", "ANALIZ YAPAN", "SERTIFIKA", "ANALIZ"])
+                        processed_df["SERTİFİKA KONTROLÜ / ANALİZ YAPAN"] = raw_df[col].fillna("-").astype(str) if col else "-"
+
+                        # 6. AMBALAJ TEMİZLİĞİ / ORTAK ANALİZ
+                        col = find_column(["AMBALAJ TEMIZLIGI", "AMBALAJ", "ORTAK ANALIZ"])
+                        processed_df["AMBALAJ TEMİZLİĞİ"] = raw_df[col].fillna("-").astype(str) if col else "-"
+
+                        # 7. ETİKET UYGUNLUK
+                        col = find_column(["ETIKET", "LABEL", "ETIKET UYGUNLUK"])
+                        processed_df["ETİKET UYGUNLUK"] = raw_df[col].fillna("-").astype(str) if col else "-"
+
+                        # 8. KABUL - RED (OTOMATİK NORMALİZASYON)
+                        col = find_column(["KABUL - RED", "KABUL", "RED", "DURUM", "SONUC", "KARAR", "STATUS"])
+                        def parse_kabul_red(val):
+                            v = str(val).upper().replace("İ", "I").strip()
+                            if any(k in v for k in ["KABUL", "ONAY", "UYGUN", "PASS", "OK"]):
+                                return "KABUL"
+                            elif any(k in v for k in ["RED", "RET", "UYGUNSUZ", "FAIL", "NOK"]):
+                                return "RED"
                             else:
-                                return "Bekliyor"
+                                return "BEKLİYOR"
 
-                        if durum_cols:
-                            processed_df["Mevcut Durum"] = raw_df[durum_cols[0]].apply(parse_status)
-                        else:
-                            processed_df["Mevcut Durum"] = "Bekliyor"
+                        processed_df["KABUL - RED"] = raw_df[col].apply(parse_kabul_red) if col else "BEKLİYOR"
 
-                        # 4. Tarih Kolonu Algılama
-                        tarih_cols = [c for c in raw_df.columns if any(k in str(c).lower() for k in ["tarih", "date", "kabul", "giriş"])]
-                        if tarih_cols:
-                            processed_df["Kabul Tarihi"] = raw_df[tarih_cols[0]].fillna(bugun).astype(str)
-                        else:
-                            processed_df["Kabul Tarihi"] = bugun
+                        # 9. MENŞEİ (ÜRETİM YERİ)
+                        col = find_column(["MENSEI", "URETIM YERI", "ULKE", "ORIGIN"])
+                        processed_df["MENŞEİ (ÜRETİM YERİ)"] = raw_df[col].fillna("-").astype(str) if col else "-"
 
-                        # 5. Not Kolonu Algılama
-                        not_cols = [c for c in raw_df.columns if any(k in str(c).lower() for k in ["not", "açıklama", "yorum", "lab", "gerekçe", "neden"])]
-                        if not_cols:
-                            processed_df["Laboratuvar Notu"] = raw_df[not_cols[0]].fillna("Not girilmedi").astype(str)
-                        else:
-                            processed_df["Laboratuvar Notu"] = "Excel aktarımı ile yüklendi"
+                        # 10. RUBY ANALİZ DURUMU
+                        col = find_column(["RUBY ANALIZ", "LAB DURUMU", "ANALIZ DURUMU"])
+                        processed_df["RUBY ANALİZ DURUMU"] = raw_df[col].fillna("-").astype(str) if col else "-"
 
-                        # 6. Numune Kodu Algılama / Üretme
-                        kod_cols = [c for c in raw_df.columns if any(k in str(c).lower() for k in ["kod", "no", "id", "numune no"])]
-                        if kod_cols:
-                            processed_df["Numune Kodu"] = raw_df[kod_cols[0]].fillna("").astype(str)
-                            for idx, val in enumerate(processed_df["Numune Kodu"]):
-                                if str(val).strip() == "":
-                                    processed_df.at[idx, "Numune Kodu"] = f"NUM-2026-{idx+1:03d}"
-                        else:
-                            processed_df["Numune Kodu"] = [f"NUM-2026-{i+1:03d}" for i in range(len(processed_df))]
+                        # 11. COA
+                        col = find_column(["COA", "ANALIZ SERTIFIKASI"])
+                        processed_df["COA"] = raw_df[col].fillna("-").astype(str) if col else "-"
 
-                        standart_df = processed_df[["Numune Kodu", "Tedarikçi", "Numune Tanımı", "Kabul Tarihi", "Mevcut Durum", "Laboratuvar Notu"]]
-                        
+                        # 12. RUBY TDS
+                        col = find_column(["TDS", "RUBY TDS", "TEKNIK DOKUMAN"])
+                        processed_df["RUBY TDS"] = raw_df[col].fillna("-").astype(str) if col else "-"
+
+                        # 13. RUBY SDS
+                        col = find_column(["SDS", "MSDS", "RUBY SDS", "GUVENLIK"])
+                        processed_df["RUBY SDS"] = raw_df[col].fillna("-").astype(str) if col else "-"
+
+                        # 14. ORJİN (KAYNAK)
+                        col = find_column(["ORJIN", "KAYNAK", "SOURCE"])
+                        processed_df["ORJİN (KAYNAK)"] = raw_df[col].fillna("-").astype(str) if col else "-"
+
+                        # 15. DOĞAL / REACH NO
+                        col = find_column(["REACH", "DOGAL", "REACH NO"])
+                        processed_df["DOĞAL / REACH NO"] = raw_df[col].fillna("-").astype(str) if col else "-"
+
+                        # Tabloyu tam sırada hizalama
+                        final_df = processed_df[KALITE_KOLONLARI]
+
                         col_btn1, col_btn2 = st.columns(2)
                         with col_btn1:
-                            if st.button("🔄 Tabloyu Bu Verilerle Sıfırla & Yükle"):
-                                st.session_state["numuneler"] = standart_df
-                                st.success(f"{len(standart_df)} adet numune başarıyla aktarıldı (Kabul/Red durumları otomatik ayrıldı).")
+                            if st.button("🔄 Tabloyu Bu Excel İle Sıfırla & Yükle"):
+                                st.session_state["numuneler"] = final_df
+                                st.success(f"Başarılı! {len(final_df)} adet kayıt 15 sütunluk şablona tam oturtuldu.")
                                 st.rerun()
                         with col_btn2:
                             if st.button("➕ Mevcut Listenin Altına Ekle"):
-                                st.session_state["numuneler"] = pd.concat([st.session_state["numuneler"], standart_df], ignore_index=True)
-                                st.success(f"{len(standart_df)} yeni kayıt listenin altına eklendi!")
+                                st.session_state["numuneler"] = pd.concat([st.session_state["numuneler"], final_df], ignore_index=True)
+                                st.success(f"{len(final_df)} adet yeni satır listenin altına eklendi!")
                                 st.rerun()
-                                
+
                 except Exception as e:
-                    st.error(f"Dosya okunurken bir hata oluştu: {e}")
+                    st.error(f"Dosya işlenirken hata oluştu: {e}")
 
         with col_up2:
-            st.markdown("**Örnek Şablon:**")
-            st.caption("İsterseniz boş bir şablon indirip kullanabilirsiniz.")
+            st.markdown("**15 Sütunluk Orijinal Excel Şablonu:**")
+            st.caption("Resimdeki başlıkların tam birebir şablonudur.")
             sample_template_io = io.BytesIO()
             with pd.ExcelWriter(sample_template_io, engine='openpyxl') as writer:
-                st.session_state["numuneler"].to_excel(writer, index=False, sheet_name='Numune_Sablon')
+                st.session_state["numuneler"].to_excel(writer, index=False, sheet_name='Kalite_Takip_Sablonu')
             st.download_button(
-                label="📄 Numune Şablonunu İndir",
+                label="📄 Kalite Kontrol Şablonunu İndir",
                 data=sample_template_io.getvalue(),
-                file_name="Numune_Sablonu.xlsx",
+                file_name="Kalite_Kontrol_Numune_Sablonu.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
 
     s_df = st.session_state["numuneler"]
-    
-    # Canlı Durum Kartları
+
+    # Canlı Durum Metrik Kartları
     col_m1, col_m2, col_m3, col_m4 = st.columns(4)
-    col_m1.metric("Toplam Numune", f"{len(s_df)} Adet")
-    col_m2.metric("⏳ Beklemede", f"{len(s_df[s_df['Mevcut Durum'] == 'Bekliyor'])} Adet")
-    col_m3.metric("🔬 Analizde", f"{len(s_df[s_df['Mevcut Durum'] == 'Analizde'])} Adet")
-    col_m4.metric("✅ Kalite Onaylı", f"{len(s_df[s_df['Mevcut Durum'] == 'Kalite Onaylandı'])} Adet")
+    col_m1.metric("Toplam Kayıt", f"{len(s_df)} Adet")
+    col_m2.metric("✅ KABUL Edilen", f"{len(s_df[s_df['KABUL - RED'] == 'KABUL'])} Adet")
+    col_m3.metric("🔴 RED Edilen", f"{len(s_df[s_df['KABUL - RED'] == 'RED'])} Adet")
+    col_m4.metric("⏳ BEKLİYOR", f"{len(s_df[s_df['KABUL - RED'] == 'BEKLİYOR'])} Adet")
 
     st.divider()
 
-    # Üst Bölüm: Numune Ekleme ve Durum Güncelleme
-    col_sol, col_sag = st.columns([1, 1.2])
+    # --- YENİ KAYIT & HIZLI KARAR GÜNCELLEME ---
+    col_left, col_right = st.columns([1.1, 1.2])
 
-    with col_sol:
-        st.markdown("### ➕ Yeni Numune Kabul Girişi")
-        with st.form("yeni_numune_form", clear_on_submit=True):
-            oto_kod = f"NUM-2026-{len(st.session_state['numuneler']) + 1:03d}"
-            st.text_input("Numune Kodu:", value=oto_kod, disabled=True)
-            tedarikci_sec = st.text_input("Tedarikçi Firma:", placeholder="Örn: Firma A")
-            tanim_gir = st.text_input("Numune Tanımı / Lot Numarası:", placeholder="Örn: Yeni Formülasyon Esans Şarjı")
-            not_gir = st.text_input("Başlangıç Test Amacı:", placeholder="Örn: GC-MS Saflık ve Koku Testi")
-            kayit_butonu = st.form_submit_button("📥 Numuneyi Kaydet")
-
-            if kayit_butonu and tanim_gir and tedarikci_sec:
-                yeni_kayit = pd.DataFrame([{
-                    "Numune Kodu": oto_kod,
-                    "Tedarikçi": tedarikci_sec,
-                    "Numune Tanımı": tanim_gir,
-                    "Kabul Tarihi": datetime.date.today().strftime("%Y-%m-%d"),
-                    "Mevcut Durum": "Bekliyor",
-                    "Laboratuvar Notu": not_gir if not_gir else "Kabul edildi, test sırasında bekliyor"
+    with col_left:
+        st.markdown("### ➕ Manuel Numune Girişi")
+        with st.form("manuel_numune_form", clear_on_submit=True):
+            f_hammadde = st.text_input("Hammadde Adı:", placeholder="Örn: Bergamot Esansı")
+            f_firma = st.text_input("Firma İsmi:", placeholder="Örn: Grasse Fragrance Ltd.")
+            f_lot = st.text_input("Lot No:", placeholder="Örn: LOT-9941")
+            f_tarih = st.date_input("Kabul Tarihi:", datetime.date.today())
+            f_karar = st.selectbox("Kabul / Red Durumu:", ["BEKLİYOR", "KABUL", "RED"])
+            f_analiz = st.text_input("Analiz Yapan / Not:", placeholder="Örn: Ahmet K. / Koku testi yapıldı")
+            
+            ekle_btn = st.form_submit_button("✅ Sisteme Kaydet")
+            if ekle_btn and f_hammadde and f_firma:
+                yeni_satir = pd.DataFrame([{
+                    "HAMMADDE ADI": f_hammadde,
+                    "FİRMA İSMİ": f_firma,
+                    "LOT NO": f_lot if f_lot else "-",
+                    "TARİH": f_tarih.strftime("%Y-%m-%d"),
+                    "SERTİFİKA KONTROLÜ / ANALİZ YAPAN": f_analiz if f_analiz else "-",
+                    "AMBALAJ TEMİZLİĞİ": "Uygun",
+                    "ETİKET UYGUNLUK": "Uygun",
+                    "KABUL - RED": f_karar,
+                    "MENŞEİ (ÜRETİM YERİ)": "-",
+                    "RUBY ANALİZ DURUMU": "-",
+                    "COA": "-",
+                    "RUBY TDS": "-",
+                    "RUBY SDS": "-",
+                    "ORJİN (KAYNAK)": "-",
+                    "DOĞAL / REACH NO": "-"
                 }])
-                st.session_state["numuneler"] = pd.concat([yeni_kayit, st.session_state["numuneler"]], ignore_index=True)
-                st.success(f"{oto_kod} sisteme başarıyla işlendi!")
+                st.session_state["numuneler"] = pd.concat([yeni_satir, st.session_state["numuneler"]], ignore_index=True)
+                st.success(f"{f_hammadde} ({f_karar}) olarak sisteme kaydedildi!")
                 st.rerun()
 
-    with col_sag:
-        st.markdown("### ⚡ Hızlı Durum & Sonuç Güncelleme")
+    with col_right:
+        st.markdown("### ⚡ Karar & Durum Güncelle")
         if len(st.session_state["numuneler"]) > 0:
-            secili_kod = st.selectbox("İşlem Yapılacak Numuneyi Seçin:", st.session_state["numuneler"]["Numune Kodu"].tolist())
-            idx = st.session_state["numuneler"][st.session_state["numuneler"]["Numune Kodu"] == secili_kod].index[0]
-            satir = st.session_state["numuneler"].loc[idx]
+            hammadde_listesi = [f"{i}: {row['HAMMADDE ADI']} ({row['FİRMA İSMİ']}) - {row['LOT NO']}" for i, row in st.session_state["numuneler"].iterrows()]
+            secilen_idx_str = st.selectbox("İşlem Yapılacak Satırı Seçin:", hammadde_listesi)
+            secilen_index = int(secilen_idx_str.split(":")[0])
+            secili_satir = st.session_state["numuneler"].loc[secilen_index]
 
-            st.info(f"**Tedarikçi:** {satir['Tedarikçi']} | **Tanım:** {satir['Numune Tanımı']} | **Giriş:** {satir['Kabul Tarihi']}")
+            st.info(f"**Hammadde:** {secili_satir['HAMMADDE ADI']} | **Firma:** {secili_satir['FİRMA İSMİ']} | **Tarih:** {secili_satir['TARİH']}")
             
-            durum_secenekleri = ["Bekliyor", "Analizde", "Kalite Onaylandı", "Reddedildi"]
-            varsayilan_idx = durum_secenekleri.index(satir["Mevcut Durum"]) if satir["Mevcut Durum"] in durum_secenekleri else 0
-            
-            yeni_durum_sec = st.selectbox("Numunenin Yeni Durumu:", durum_secenekleri, index=varsayilan_idx)
-            guncel_not_gir = st.text_area("Laboratuvar / Test Değerlendirme Notu:", value=satir["Laboratuvar Notu"], height=80)
-            
-            if st.button("💾 Sonucu Sisteme Kaydet", use_container_width=True):
-                st.session_state["numuneler"].at[idx, "Mevcut Durum"] = yeni_durum_sec
-                st.session_state["numuneler"].at[idx, "Laboratuvar Notu"] = guncel_not_gir
-                st.success(f"{secili_kod} güncellendi!")
+            col_k1, col_k2 = st.columns(2)
+            with col_k1:
+                yeni_karar = st.selectbox(
+                    "KABUL - RED Durumu:",
+                    ["BEKLİYOR", "KABUL", "RED"],
+                    index=["BEKLİYOR", "KABUL", "RED"].index(secili_satir["KABUL - RED"]) if secili_satir["KABUL - RED"] in ["BEKLİYOR", "KABUL", "RED"] else 0
+                )
+            with col_k2:
+                yeni_analiz_durum = st.text_input("Ruby Analiz Durumu:", value=str(secili_satir["RUBY ANALİZ DURUMU"]))
+
+            guncel_analiz_yapan = st.text_input("Analiz Yapan / Açıklama:", value=str(secili_satir["SERTİFİKA KONTROLÜ / ANALİZ YAPAN"]))
+
+            if st.button("💾 Değişiklikleri Kaydet", use_container_width=True):
+                st.session_state["numuneler"].at[secilen_index, "KABUL - RED"] = yeni_karar
+                st.session_state["numuneler"].at[secilen_index, "RUBY ANALİZ DURUMU"] = yeni_analiz_durum
+                st.session_state["numuneler"].at[secilen_index, "SERTİFİKA KONTROLÜ / ANALİZ YAPAN"] = guncel_analiz_yapan
+                st.success("Kayıt başarıyla güncellendi!")
                 st.rerun()
 
     st.divider()
 
-    # Alt Bölüm: Görsel Süreç Tablosu & Excel Dışa Aktarma
-    st.subheader("📋 Canlı Numune Takip Listesi")
+    # --- CANLI TABLO & FİLTRELEME ALANI ---
+    st.subheader("📋 Canlı Numune & Hammadde Takip Tablosu")
     
-    filtre = st.radio("Listelenecek Durum:", ["Tümü", "Bekliyor", "Analizde", "Kalite Onaylandı", "Reddedildi"], horizontal=True)
-    gosterilecek_df = st.session_state["numuneler"] if filtre == "Tümü" else st.session_state["numuneler"][st.session_state["numuneler"]["Mevcut Durum"] == filtre]
-    
-    st.dataframe(gosterilecek_df, use_container_width=True)
+    col_f1, col_f2 = st.columns([1.5, 2])
+    with col_f1:
+        karar_filtresi = st.radio("Kabul/Red Filtresi:", ["Tümü", "KABUL", "RED", "BEKLİYOR"], horizontal=True)
+    with col_f2:
+        firma_ara = st.text_input("🔍 Firma veya Hammadde Ara:", placeholder="Örn: Grasse veya Etanol...")
 
-    numune_excel = io.BytesIO()
-    with pd.ExcelWriter(numune_excel, engine='openpyxl') as writer:
-        st.session_state["numuneler"].to_excel(writer, index=False, sheet_name='Numune_Listesi')
+    # Filtreleme Motoru
+    tablo_df = st.session_state["numuneler"].copy()
+    if karar_filtresi != "Tümü":
+        tablo_df = tablo_df[tablo_df["KABUL - RED"] == karar_filtresi]
+    
+    if firma_ara:
+        tablo_df = tablo_df[
+            tablo_df["HAMMADDE ADI"].str.contains(firma_ara, case=False, na=False) |
+            tablo_df["FİRMA İSMİ"].str.contains(firma_ara, case=False, na=False) |
+            tablo_df["LOT NO"].str.contains(firma_ara, case=False, na=False)
+        ]
+
+    st.dataframe(tablo_df, use_container_width=True)
+
+    # Excel Olarak İndirme (Orijinal 15 Sütun Formatında)
+    numune_out_io = io.BytesIO()
+    with pd.ExcelWriter(numune_out_io, engine='openpyxl') as writer:
+        st.session_state["numuneler"].to_excel(writer, index=False, sheet_name='Kalite_Kontrol_Listesi')
+
     st.download_button(
-        label="📥 Güncel Numune Raporunu Excel Olarak İndir",
-        data=numune_excel.getvalue(),
-        file_name="Numune_Takip_Raporu.xlsx",
+        label="📥 Güncel Tabloyu Fabrika Formatında Excel Olarak İndir",
+        data=numune_out_io.getvalue(),
+        file_name="Kalite_Kontrol_Numune_Listesi.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
@@ -511,7 +632,7 @@ st.sidebar.markdown(
     <div style='background-color: rgba(128, 128, 128, 0.1); padding: 12px; border-radius: 8px; text-align: center; margin-top: 20px;'>
         <p style='margin: 0; font-size: 13px; font-weight: bold;'>Developed by</p>
         <p style='margin: 0; font-size: 18px; color: #FF4B4B; font-weight: 800;'>⚡ miyaetp</p>
-        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v3.4.0 • Smart Parser Edition</p>
+        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v4.0.0 • 15-Column Factory Edition</p>
     </div>
     """,
     unsafe_allow_html=True
