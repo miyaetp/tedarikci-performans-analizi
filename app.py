@@ -1,4 +1,5 @@
 import io
+import time
 import random
 import datetime
 import streamlit as st
@@ -98,24 +99,15 @@ if not st.session_state["authenticated"]:
         st.caption("⚡ Developed by **miyaetp**")
     st.stop()
 
-# --- 3. OYUN SİSTEMİ HAFIZASI ---
-GAME_SCENARIOS = [
-    {"urun": "Fransız Lavanta Esansı", "lot": "LOT-882", "durum_text": "GC-MS saflık %99.2, IFRA sertifikası ve koku profili tam uygun.", "dogru": "KABUL", "ipucu": "Tüm parametreler standartlara uygun."},
-    {"urun": "100ml Cam Parfüm Şişesi", "lot": "LOT-412", "durum_text": "Basınç testinde 50 adetten 6 tanesinde mikroskobik çatlak ve sızıntı saptandı.", "dogru": "RED", "ipucu": "Sızdırmazlık eşiği aşıldı!"},
-    {"urun": "Kozmetik Denatüre Alkol %96", "lot": "LOT-901", "durum_text": "Alkol derecesi %96.4, yabancı koku yok, analiz sertifikası eksiksiz.", "dogru": "KABUL", "ipucu": "Mükemmel saflık derecesi."},
-    {"urun": "Zamak Manyetik Kapak", "lot": "LOT-303", "durum_text": "Manyetik tutuş kuvveti zayıf, kapak şişeden kendiliğinden düşüyor.", "dogru": "RED", "ipucu": "Manyetik tutuş toleransı tutmuyor."},
-    {"urun": "Amber & Vanilya Koku Yağı", "lot": "LOT-550", "durum_text": "Koku notalarında belirgin yanık solvent kokusu var, renk bulanık.", "dogru": "RED", "ipucu": "Organoleptik testte bariz hata var."},
-    {"urun": "Altın Yaldızlı Sprey Pompa", "lot": "LOT-124", "durum_text": "100 basım dayanıklılık testi başarıyla geçti, homojen mikro püskürtme sağlıyor.", "dogru": "KABUL", "ipucu": "Püskürtme ve krimp testi başarılı."}
-]
-
-if "game_score" not in st.session_state:
-    st.session_state["game_score"] = 0
-if "game_streak" not in st.session_state:
-    st.session_state["game_streak"] = 0
-if "current_case_idx" not in st.session_state:
-    st.session_state["current_case_idx"] = random.randint(0, len(GAME_SCENARIOS) - 1)
-if "game_last_msg" not in st.session_state:
-    st.session_state["game_last_msg"] = None
+# --- 3. REFLEKS OYUNU DURUM YÖNETİMİ ---
+if "click_score" not in st.session_state:
+    st.session_state["click_score"] = 0
+if "target_pos" not in st.session_state:
+    st.session_state["target_pos"] = random.randint(0, 8)
+if "last_click_time" not in st.session_state:
+    st.session_state["last_click_time"] = time.time()
+if "reaction_speed" not in st.session_state:
+    st.session_state["reaction_speed"] = 0
 
 # --- 4. FABRİKA KALİTE NUMUNE ŞABLON YAPISI (15 SÜTUN) ---
 KALITE_KOLONLARI = [
@@ -304,11 +296,11 @@ if secilen_sayfa == "📊 Tedarikçi Kalite & Karar Paneli":
 
     st.divider()
 
-    # YENİLENEN SEKMELER (WHAT-IF SİLİNDİ, OYUN EKLENDİ)
+    # YENİLENEN SEKMELER (REFLEKS OYUNU EKLİ)
     tab1, tab2, tab_game, tab3, tab4, tab5 = st.tabs([
         "📊 Genel Kalite Sıralaması",
         "🎯 Harcama & Risk Matrisi",
-        "🎮 Kalite Refleks Oyunu",
+        "⚡ Kusurlu Parça Avcısı",
         "⚔️ İki Tedarikçi Kıyaslama",
         "📈 6 Aylık Trend & Karne",
         "📄 Resmi DÖF & İhtar Mektubu"
@@ -350,69 +342,48 @@ if secilen_sayfa == "📊 Tedarikçi Kalite & Karar Paneli":
             fig_scatter.update_layout(height=400, margin=dict(l=20, r=20, t=30, b=20))
             st.plotly_chart(fig_scatter, use_container_width=True)
 
-    # --- YENİ EKLENEN KALİTE OYUNU SEKRESİ ---
+    # --- REFLEKS OYUNU SEKRESİ ---
     with tab_game:
-        st.subheader("🎮 Kalite Kontrol Müdürü: Kabul mü, Ret mi?")
-        st.caption("Fabrikaya gelen hammadde ve ambalajların analiz raporlarına göre hızlı ve doğru kalite kararını verin!")
-        
-        # Skor Tablosu
-        col_g1, col_g2, col_g3 = st.columns(3)
-        col_g1.metric("🏆 Toplam Kalite Skoru", f"{st.session_state['game_score']} Puan")
-        col_g2.metric("🔥 Başarı Serisi (Streak)", f"{st.session_state['game_streak']} Doğru")
-        if col_g3.button("🔄 Skoru Sıfırla & Baştan Başla"):
-            st.session_state["game_score"] = 0
-            st.session_state["game_streak"] = 0
-            st.session_state["current_case_idx"] = random.randint(0, len(GAME_SCENARIOS) - 1)
-            st.session_state["game_last_msg"] = None
+        st.subheader("⚡ Kusurlu Parça Avcısı (Kalite Refleks Oyunu)")
+        st.caption("Banttan geçen sağlam ürünler (🟢) arasındaki kusurlu kırmızı parçayı (🔴) en hızlı şekilde yakalayın!")
+
+        col_gm1, col_gm2, col_gm3 = st.columns(3)
+        col_gm1.metric("🎯 Yakalanan Kusurlu Parça", f"{st.session_state['click_score']} Adet")
+        col_gm2.metric("⚡ Son Tepki Hızı", f"{st.session_state['reaction_speed']:.2f} sn" if st.session_state['reaction_speed'] > 0 else "-")
+        if col_gm3.button("🔄 Sıfırla"):
+            st.session_state["click_score"] = 0
+            st.session_state["reaction_speed"] = 0
+            st.session_state["target_pos"] = random.randint(0, 8)
+            st.session_state["last_click_time"] = time.time()
             st.rerun()
 
-        # Aktif Vaka Kartı
-        cur_case = GAME_SCENARIOS[st.session_state["current_case_idx"]]
-        st.markdown(
-            f"""
-            <div style='background: rgba(255, 75, 75, 0.08); padding: 22px; border-radius: 12px; border: 1px solid rgba(255, 75, 75, 0.3); margin-top: 15px;'>
-                <h3 style='margin: 0 0 8px 0; color: #FF4B4B;'>📦 Gelen Numune: {cur_case['urun']}</h3>
-                <p style='margin: 0; font-size: 13px; color: gray;'><b>Parti No:</b> {cur_case['lot']}</p>
-                <hr style='border: none; border-top: 1px solid rgba(128,128,128,0.2); margin: 12px 0;'>
-                <p style='font-size: 16px; font-weight: 500;'>🧪 <b>Laboratuvar Kontrol Notu:</b></p>
-                <p style='font-size: 15px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px;'>{cur_case['durum_text']}</p>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        st.markdown("---")
 
-        st.markdown("<br>", unsafe_allow_html=True)
-        col_btn_kabul, col_btn_red = st.columns(2)
-        
-        def process_answer(user_choice):
-            if user_choice == cur_case["dogru"]:
-                st.session_state["game_score"] += 10
-                st.session_state["game_streak"] += 1
-                st.session_state["game_last_msg"] = ("success", f"🎯 Harika karar! Doğru cevap: {cur_case['dogru']}. {cur_case['ipucu']}")
-            else:
-                st.session_state["game_score"] = max(0, st.session_state["game_score"] - 5)
-                st.session_state["game_streak"] = 0
-                st.session_state["game_last_msg"] = ("error", f"❌ Yanlış karar! Doğru karar '{cur_case['dogru']}' olmalıydı. {cur_case['ipucu']}")
-            
-            # Yeni rastgele vaka seç
-            remaining = [i for i in range(len(GAME_SCENARIOS)) if i != st.session_state["current_case_idx"]]
-            st.session_state["current_case_idx"] = random.choice(remaining)
-            st.rerun()
+        # 3x3 Kalite Kontrol Izgarası
+        grid_cols = st.columns(3)
+        target = st.session_state["target_pos"]
 
-        with col_btn_kabul:
-            if st.button("✅ KABUL ET (Onayla)", use_container_width=True):
-                process_answer("KABUL")
-                
-        with col_btn_red:
-            if st.button("❌ REDDET (Uygunsuzluk Ver)", use_container_width=True):
-                process_answer("RED")
-
-        if st.session_state["game_last_msg"]:
-            msg_type, msg_text = st.session_state["game_last_msg"]
-            if msg_type == "success":
-                st.success(msg_text)
-            else:
-                st.error(msg_text)
+        for i in range(9):
+            col = grid_cols[i % 3]
+            with col:
+                if i == target:
+                    # Kırmızı Kusurlu Hedef
+                    if st.button("🔴 KUSURLU!", key=f"target_btn_{i}", use_container_width=True, type="primary"):
+                        now = time.time()
+                        st.session_state["reaction_speed"] = now - st.session_state["last_click_time"]
+                        st.session_state["last_click_time"] = now
+                        st.session_state["click_score"] += 1
+                        
+                        # Yeni rastgele pozisyon
+                        available = [x for x in range(9) if x != target]
+                        st.session_state["target_pos"] = random.choice(available)
+                        st.rerun()
+                else:
+                    # Yeşil Sağlam Parçalar
+                    if st.button("🟢 Sağlam", key=f"safe_btn_{i}", use_container_width=True):
+                        st.session_state["click_score"] = max(0, st.session_state["click_score"] - 1)
+                        st.toast("⚠️ Sağlam ürüne tıkladınız! -1 Puan")
+                        st.rerun()
 
     with tab3:
         st.subheader("⚔️ İki Tedarikçi Birebir Kıyaslaması (Radar Analizi)")
@@ -475,7 +446,6 @@ else:
     st.title("🧪 Canlı Numune & Hammadde Kalite Takip Sistemi")
     st.caption("Fabrika Giriş Kalite Kontrol Şablonuna Uygun Numune Kabul, Analiz ve Kabul/Red Yönetimi")
 
-    # --- ESNEK VE TAM EŞLEŞTİRMELİ EXCEL YÜKLEME ALANI ---
     with st.expander("📥 Kalite Kontrol Excel Listesini İçe Aktar", expanded=False):
         col_up1, col_up2 = st.columns([2, 1])
         with col_up1:
@@ -528,7 +498,7 @@ else:
                         col = find_column(["ETIKET", "LABEL", "ETIKET UYGUNLUK"])
                         processed_df["ETİKET UYGUNLUK"] = raw_df[col].fillna("-").astype(str) if col else "-"
 
-                        # 8. KABUL - RED (OTOMATİK NORMALİZASYON)
+                        # 8. KABUL - RED
                         col = find_column(["KABUL - RED", "KABUL", "RED", "DURUM", "SONUC", "KARAR", "STATUS"])
                         def parse_kabul_red(val):
                             v = str(val).upper().replace("İ", "I").strip()
@@ -588,7 +558,6 @@ else:
 
         with col_up2:
             st.markdown("**15 Sütunluk Orijinal Excel Şablonu:**")
-            st.caption("Resimdeki başlıkların tam birebir şablonudur.")
             sample_template_io = io.BytesIO()
             with pd.ExcelWriter(sample_template_io, engine='openpyxl') as writer:
                 st.session_state["numuneler"].to_excel(writer, index=False, sheet_name='Kalite_Takip_Sablonu')
@@ -610,7 +579,6 @@ else:
 
     st.divider()
 
-    # --- YENİ KAYIT & HIZLI KARAR GÜNCELLEME ---
     col_left, col_right = st.columns([1.1, 1.2])
 
     with col_left:
@@ -716,7 +684,7 @@ st.sidebar.markdown(
     <div style='background-color: rgba(128, 128, 128, 0.1); padding: 12px; border-radius: 8px; text-align: center; margin-top: 20px;'>
         <p style='margin: 0; font-size: 13px; font-weight: bold;'>Developed by</p>
         <p style='margin: 0; font-size: 18px; color: #FF4B4B; font-weight: 800;'>⚡ miyaetp</p>
-        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v4.3.0 • Quality Game Edition</p>
+        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v4.4.0 • Reflex Defect Hunter</p>
     </div>
     """,
     unsafe_allow_html=True
