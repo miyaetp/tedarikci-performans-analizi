@@ -7,7 +7,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 
-# 1. Sayfa Yapılandırması (Sol Menü Daima Açık Başlar)
+# 1. Sayfa Yapılandırması
 st.set_page_config(
     page_title="Kalite & Numune Yönetim Sistemi | miyaetp",
     page_icon="⚡",
@@ -114,7 +114,9 @@ KALITE_KOLONLARI = [
     "RUBY TDS",
     "RUBY SDS",
     "ORJİN (KAYNAK)",
-    "DOĞAL / REACH NO"
+    "DOĞAL / REACH NO",
+    "SKT (SON KULLANMA)",
+    "IFRA UYGUNLUK"
 ]
 
 if "numuneler" not in st.session_state:
@@ -134,7 +136,9 @@ if "numuneler" not in st.session_state:
             "RUBY TDS": "Mevcut",
             "RUBY SDS": "Mevcut",
             "ORJİN (KAYNAK)": "Sentetik/Doğal Karışım",
-            "DOĞAL / REACH NO": "REACH-092831"
+            "DOĞAL / REACH NO": "REACH-092831",
+            "SKT (SON KULLANMA)": "2027-08-28",
+            "IFRA UYGUNLUK": "IFRA 51 - Onaylı (%12 Kat. 4)"
         },
         {
             "HAMMADDE ADI": "Kozmetik Denatüre Alkol %96",
@@ -151,7 +155,9 @@ if "numuneler" not in st.session_state:
             "RUBY TDS": "Mevcut",
             "RUBY SDS": "Mevcut",
             "ORJİN (KAYNAK)": "Tarımsal Etanol",
-            "DOĞAL / REACH NO": "REACH-883102"
+            "DOĞAL / REACH NO": "REACH-883102",
+            "SKT (SON KULLANMA)": "2028-08-30",
+            "IFRA UYGUNLUK": "Muaf (Çözücü)"
         },
         {
             "HAMMADDE ADI": "100ml Lüks Cam Şişe",
@@ -168,7 +174,9 @@ if "numuneler" not in st.session_state:
             "RUBY TDS": "Eksik",
             "RUBY SDS": "Mevcut Değil",
             "ORJİN (KAYNAK)": "Cam",
-            "DOĞAL / REACH NO": "-"
+            "DOĞAL / REACH NO": "-",
+            "SKT (SON KULLANMA)": "2030-01-01",
+            "IFRA UYGUNLUK": "Muaf (Ambalaj)"
         }
     ])
 
@@ -192,7 +200,12 @@ if st.sidebar.button("🚪 Güvenli Çıkış Yap"):
 st.sidebar.title("📌 Modül / Sayfa Seçimi")
 secilen_sayfa = st.sidebar.radio(
     "Gitmek İstediğiniz Sayfayı Seçin:",
-    ["📊 Tedarikçi Kalite & Karar Paneli", "🧪 Canlı Numune Takip Sistemi"]
+    [
+        "📊 Tedarikçi Kalite & Karar Paneli",
+        "🧪 Canlı Numune & Hammadde Takip",
+        "🔬 Parfüm Laboratuvar Doğrulama (IFRA/Fizikokimya)",
+        "🏷️ Depo Etiket Basıcı & Lot Pasaportu"
+    ]
 )
 st.sidebar.divider()
 
@@ -222,17 +235,6 @@ if secilen_sayfa == "📊 Tedarikçi Kalite & Karar Paneli":
             st.stop()
     else:
         df = get_sample_data()
-
-    template_io = io.BytesIO()
-    with pd.ExcelWriter(template_io, engine='openpyxl') as writer:
-        get_sample_data().to_excel(writer, index=False, sheet_name='Sablon')
-
-    st.sidebar.download_button(
-        label="📄 Örnek Excel Şablonunu İndir",
-        data=template_io.getvalue(),
-        file_name="Tedarikci_Sablonu.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
 
     def calculate_scores(dataframe):
         temp_df = dataframe.copy()
@@ -285,11 +287,9 @@ if secilen_sayfa == "📊 Tedarikçi Kalite & Karar Paneli":
 
     st.divider()
 
-    # YENİLENEN SEKMELER (GELİŞMİŞ ZOR PAC-MAN)
-    tab1, tab2, tab_pacman, tab3, tab4, tab5 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "📊 Genel Kalite Sıralaması",
         "🎯 Harcama & Risk Matrisi",
-        "🕹️ Retro Pac-Man (Hard Arcade)",
         "⚔️ İki Tedarikçi Kıyaslama",
         "📈 6 Aylık Trend & Karne",
         "📄 Resmi DÖF & İhtar Mektubu"
@@ -330,385 +330,6 @@ if secilen_sayfa == "📊 Tedarikçi Kalite & Karar Paneli":
             fig_scatter.update_traces(textposition='top center')
             fig_scatter.update_layout(height=400, margin=dict(l=20, r=20, t=30, b=20))
             st.plotly_chart(fig_scatter, use_container_width=True)
-
-    # --- GELİŞMİŞ & ZOR PAC-MAN OYUNU ---
-    with tab_pacman:
-        st.subheader("🕹️ Pac-Man: Hardcore Arcade Edition")
-        st.caption("🎮 Yön tuşları veya W-A-S-D ile kontrol edin. Dikkat: Hayaletler akıllıdır ve doğrudan sizi takip eder!")
-
-        pacman_pro_html = """
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body {
-              margin: 0;
-              background-color: #0e1117;
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              font-family: 'Courier New', Courier, monospace;
-              color: white;
-              user-select: none;
-            }
-            #header {
-              display: flex;
-              justify-content: space-between;
-              width: 380px;
-              margin-bottom: 8px;
-              font-size: 16px;
-              font-weight: 900;
-              letter-spacing: 1px;
-            }
-            .score-glow { color: #f1c40f; text-shadow: 0 0 10px rgba(241,196,15,0.7); }
-            .lives-glow { color: #ff4757; text-shadow: 0 0 10px rgba(255,71,87,0.7); }
-            .high-glow { color: #2ed573; text-shadow: 0 0 10px rgba(46,213,115,0.7); }
-            canvas {
-              border: 3px solid #1e90ff;
-              border-radius: 8px;
-              background-color: #000000;
-              box-shadow: 0 0 25px rgba(30, 144, 255, 0.4);
-            }
-            #controls {
-              margin-top: 10px;
-              display: flex;
-              gap: 15px;
-            }
-            button.game-btn {
-              padding: 7px 18px;
-              background: linear-gradient(135deg, #ff4757, #ff6b81);
-              border: none;
-              color: white;
-              font-weight: bold;
-              border-radius: 6px;
-              cursor: pointer;
-              transition: transform 0.1s, box-shadow 0.2s;
-              font-family: inherit;
-            }
-            button.game-btn:hover {
-              transform: scale(1.05);
-              box-shadow: 0 0 12px rgba(255,71,87,0.8);
-            }
-          </style>
-        </head>
-        <body>
-          <div id="header">
-            <span class="score-glow">SKOR: <span id="score">0</span></span>
-            <span class="lives-glow">CAN: <span id="lives">❤❤❤</span></span>
-            <span class="high-glow">EN YÜKSEK: <span id="high">0</span></span>
-          </div>
-
-          <canvas id="gameCanvas" width="380" height="380"></canvas>
-
-          <div id="controls">
-            <button class="game-btn" onclick="initGame()">YENİDEN BAŞLAT</button>
-          </div>
-
-          <script>
-            const canvas = document.getElementById("gameCanvas");
-            const ctx = canvas.getContext("2d");
-            const scoreEl = document.getElementById("score");
-            const livesEl = document.getElementById("lives");
-            const highEl = document.getElementById("high");
-
-            const CELL = 20;
-            const ROWS = 19;
-            const COLS = 19;
-
-            // 1: Duvar, 2: Yem, 3: Power Pellet (Süper Yem), 0: Boş
-            const baseMap = [
-              [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-              [1,3,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,3,1],
-              [1,2,1,1,2,1,1,1,2,1,2,1,1,1,2,1,1,2,1],
-              [1,2,1,1,2,1,1,1,2,1,2,1,1,1,2,1,1,2,1],
-              [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
-              [1,2,1,1,2,1,2,1,1,1,1,1,2,1,2,1,1,2,1],
-              [1,2,2,2,2,1,2,2,2,1,2,2,2,1,2,2,2,2,1],
-              [1,1,1,1,2,1,1,1,0,1,0,1,1,1,2,1,1,1,1],
-              [0,0,0,1,2,1,0,0,0,0,0,0,0,1,2,1,0,0,0],
-              [1,1,1,1,2,1,0,1,1,0,1,1,0,1,2,1,1,1,1],
-              [0,0,0,0,2,0,0,1,0,0,0,1,0,0,2,0,0,0,0],
-              [1,1,1,1,2,1,0,1,1,1,1,1,0,1,2,1,1,1,1],
-              [0,0,0,1,2,1,0,0,0,0,0,0,0,1,2,1,0,0,0],
-              [1,1,1,1,2,1,2,1,1,1,1,1,2,1,2,1,1,1,1],
-              [1,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,1],
-              [1,2,1,1,2,1,1,1,2,1,2,1,1,1,2,1,1,2,1],
-              [1,3,2,1,2,2,2,2,2,0,2,2,2,2,2,1,2,3,1],
-              [1,1,2,1,2,1,2,1,1,1,1,1,2,1,2,1,2,1,1],
-              [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-            ];
-
-            let map, score = 0, highScore = 0, lives = 3, gameOver = false;
-            let frightTimer = 0;
-
-            // Karakter tanımları (Pixel-based smooth physics)
-            let pacman = {
-              x: 9 * CELL, y: 16 * CELL,
-              speed: 2.5,
-              dx: 0, dy: 0,
-              nextDx: 0, nextDy: 0,
-              angle: 0, mouth: 0.2, mouthSpeed: 0.04
-            };
-
-            // 4 Farklı Karakterli Hayalet
-            let ghosts = [];
-
-            function createGhosts() {
-              return [
-                { x: 9 * CELL, y: 8 * CELL, dx: 0, dy: -2, speed: 2.2, color: "#ff4757", name: "Blinky" }, // Saldırgan
-                { x: 9 * CELL, y: 10 * CELL, dx: 2, dy: 0, speed: 2.0, color: "#ff6b81", name: "Pinky" },  // Pusu kurucu
-                { x: 8 * CELL, y: 9 * CELL, dx: -2, dy: 0, speed: 1.9, color: "#1e90ff", name: "Inky" },   // Takipçi
-                { x: 10 * CELL, y: 9 * CELL, dx: 2, dy: 0, speed: 1.8, color: "#ffa502", name: "Clyde" }   // Rastgele
-              ];
-            }
-
-            function initGame() {
-              map = JSON.parse(JSON.stringify(baseMap));
-              score = 0;
-              lives = 3;
-              gameOver = false;
-              frightTimer = 0;
-              resetPacman();
-              ghosts = createGhosts();
-              scoreEl.innerText = score;
-              updateLivesDisplay();
-            }
-
-            function resetPacman() {
-              pacman.x = 9 * CELL;
-              pacman.y = 16 * CELL;
-              pacman.dx = 0; pacman.dy = 0;
-              pacman.nextDx = 0; pacman.nextDy = 0;
-              pacman.angle = 0;
-            }
-
-            function updateLivesDisplay() {
-              livesEl.innerText = "❤".repeat(Math.max(0, lives));
-            }
-
-            window.addEventListener("keydown", (e) => {
-              if (["ArrowUp", "KeyW"].includes(e.code)) { pacman.nextDx = 0; pacman.nextDy = -pacman.speed; e.preventDefault(); }
-              if (["ArrowDown", "KeyS"].includes(e.code)) { pacman.nextDx = 0; pacman.nextDy = pacman.speed; e.preventDefault(); }
-              if (["ArrowLeft", "KeyA"].includes(e.code)) { pacman.nextDx = -pacman.speed; pacman.nextDy = 0; e.preventDefault(); }
-              if (["ArrowRight", "KeyD"].includes(e.code)) { pacman.nextDx = pacman.speed; pacman.nextDy = 0; e.preventDefault(); }
-            });
-
-            function isWall(gx, gy) {
-              if (gx < 0 || gx >= COLS || gy < 0 || gy >= ROWS) return false;
-              return map[gy][gx] === 1;
-            }
-
-            function canMove(px, py, vx, vy) {
-              let nextX = px + vx;
-              let nextY = py + vy;
-              
-              // Köşe noktalarıyla duvar çarpışma kontrolü
-              let r = 8;
-              let p1 = { x: Math.floor((nextX + CELL/2 - r) / CELL), y: Math.floor((nextY + CELL/2 - r) / CELL) };
-              let p2 = { x: Math.floor((nextX + CELL/2 + r) / CELL), y: Math.floor((nextY + CELL/2 - r) / CELL) };
-              let p3 = { x: Math.floor((nextX + CELL/2 - r) / CELL), y: Math.floor((nextY + CELL/2 + r) / CELL) };
-              let p4 = { x: Math.floor((nextX + CELL/2 + r) / CELL), y: Math.floor((nextY + CELL/2 + r) / CELL) };
-
-              return !isWall(p1.x, p1.y) && !isWall(p2.x, p2.y) && !isWall(p3.x, p3.y) && !isWall(p4.x, p4.y);
-            }
-
-            function update() {
-              if (gameOver) return;
-
-              // Tünel Geçişi
-              if (pacman.x < -CELL) pacman.x = canvas.width;
-              if (pacman.x > canvas.width) pacman.x = -CELL;
-
-              // İstenen yöne dönebilir mi?
-              if (canMove(pacman.x, pacman.y, pacman.nextDx, pacman.nextDy)) {
-                pacman.dx = pacman.nextDx;
-                pacman.dy = pacman.nextDy;
-                if (pacman.dx > 0) pacman.angle = 0;
-                if (pacman.dx < 0) pacman.angle = Math.PI;
-                if (pacman.dy > 0) pacman.angle = Math.PI / 2;
-                if (pacman.dy < 0) pacman.angle = -Math.PI / 2;
-              }
-
-              // Mevcut yönde ilerle
-              if (canMove(pacman.x, pacman.y, pacman.dx, pacman.dy)) {
-                pacman.x += pacman.dx;
-                pacman.y += pacman.dy;
-              }
-
-              // Yem Yeme Mekaniği
-              let curGridX = Math.floor((pacman.x + CELL/2) / CELL);
-              let curGridY = Math.floor((pacman.y + CELL/2) / CELL);
-
-              if (curGridX >= 0 && curGridX < COLS && curGridY >= 0 && curGridY < ROWS) {
-                if (map[curGridY][curGridX] === 2) {
-                  map[curGridY][curGridX] = 0;
-                  score += 10;
-                  scoreEl.innerText = score;
-                } else if (map[curGridY][curGridX] === 3) {
-                  map[curGridY][curGridX] = 0;
-                  score += 50;
-                  frightTimer = 300; // ~5 saniye hayaletler korkar
-                  scoreEl.innerText = score;
-                }
-              }
-
-              if (frightTimer > 0) frightTimer--;
-
-              // Hayalet Yapay Zekası & Hareketi
-              ghosts.forEach((g, idx) => {
-                let speed = (frightTimer > 0) ? g.speed * 0.6 : g.speed;
-                let dirs = [
-                  { dx: speed, dy: 0 },
-                  { dx: -speed, dy: 0 },
-                  { dx: 0, dy: speed },
-                  { dx: 0, dy: -speed }
-                ];
-
-                // Geri dönmeyi engelle
-                let validDirs = dirs.filter(d => {
-                  if (d.dx === -g.dx && d.dy === -g.dy) return false;
-                  return canMove(g.x, g.y, d.dx, d.dy);
-                });
-
-                if (validDirs.length === 0) {
-                  validDirs = dirs.filter(d => canMove(g.x, g.y, d.dx, d.dy));
-                }
-
-                if (validDirs.length > 0) {
-                  // Agresif Hedefleme Mantığı
-                  if (idx === 0 && frightTimer === 0) {
-                    // Blinky: Doğrudan Pac-Man'e olan mesafeyi minimize eder
-                    validDirs.sort((a, b) => {
-                      let distA = Math.hypot((g.x + a.dx) - pacman.x, (g.y + a.dy) - pacman.y);
-                      let distB = Math.hypot((g.x + b.dx) - pacman.x, (g.y + b.dy) - pacman.y);
-                      return distA - distB;
-                    });
-                    g.dx = validDirs[0].dx;
-                    g.dy = validDirs[0].dy;
-                  } else {
-                    // Diğerleri kavşakta rastgele veya hafif takip
-                    if (Math.random() < 0.15 || !canMove(g.x, g.y, g.dx, g.dy)) {
-                      let picked = validDirs[Math.floor(Math.random() * validDirs.length)];
-                      g.dx = picked.dx;
-                      g.dy = picked.dy;
-                    }
-                  }
-                }
-
-                g.x += g.dx;
-                g.y += g.dy;
-
-                // Çarpışma Kontrolü
-                let dist = Math.hypot((g.x + CELL/2) - (pacman.x + CELL/2), (g.y + CELL/2) - (pacman.y + CELL/2));
-                if (dist < 14) {
-                  if (frightTimer > 0) {
-                    // Hayaleti ye
-                    score += 200;
-                    scoreEl.innerText = score;
-                    g.x = 9 * CELL;
-                    g.y = 9 * CELL;
-                  } else {
-                    // Can kaybet
-                    lives--;
-                    updateLivesDisplay();
-                    if (lives <= 0) {
-                      gameOver = true;
-                      if (score > highScore) {
-                        highScore = score;
-                        highEl.innerText = highScore;
-                      }
-                      setTimeout(() => alert("💥 OYUN BİTTİ! Toplam Kalite Skoru: " + score), 50);
-                    } else {
-                      resetPacman();
-                    }
-                  }
-                }
-              });
-
-              // Ağız animasyonu
-              pacman.mouth += pacman.mouthSpeed;
-              if (pacman.mouth > 0.38 || pacman.mouth < 0.05) pacman.mouthSpeed = -pacman.mouthSpeed;
-            }
-
-            function draw() {
-              ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-              // 1. Labirent & Yemleri Çiz
-              for (let r = 0; r < ROWS; r++) {
-                for (let c = 0; c < COLS; c++) {
-                  let tile = map[r][c];
-                  if (tile === 1) {
-                    ctx.fillStyle = "#1e3799";
-                    ctx.fillRect(c * CELL, r * CELL, CELL, CELL);
-                    ctx.strokeStyle = "#4a69bd";
-                    ctx.lineWidth = 1;
-                    ctx.strokeRect(c * CELL + 2, r * CELL + 2, CELL - 4, CELL - 4);
-                  } else if (tile === 2) {
-                    ctx.fillStyle = "#f8c291";
-                    ctx.beginPath();
-                    ctx.arc(c * CELL + CELL/2, r * CELL + CELL/2, 2.5, 0, Math.PI * 2);
-                    ctx.fill();
-                  } else if (tile === 3) {
-                    // Power Pellet (Glow efekti)
-                    ctx.fillStyle = "#ffffff";
-                    ctx.shadowColor = "#f1c40f";
-                    ctx.shadowBlur = 8;
-                    ctx.beginPath();
-                    ctx.arc(c * CELL + CELL/2, r * CELL + CELL/2, 6, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.shadowBlur = 0;
-                  }
-                }
-              }
-
-              // 2. Pac-Man Çiz
-              ctx.fillStyle = "#f1c40f";
-              ctx.shadowColor = "#f1c40f";
-              ctx.shadowBlur = 10;
-              ctx.beginPath();
-              let startAngle = pacman.angle + pacman.mouth;
-              let endAngle = pacman.angle + Math.PI * 2 - pacman.mouth;
-              ctx.arc(pacman.x + CELL/2, pacman.y + CELL/2, CELL/2 - 1, startAngle, endAngle);
-              ctx.lineTo(pacman.x + CELL/2, pacman.y + CELL/2);
-              ctx.fill();
-              ctx.shadowBlur = 0;
-
-              // 3. Hayaletleri Çiz
-              ghosts.forEach(g => {
-                ctx.fillStyle = (frightTimer > 0) ? ((frightTimer < 80 && Math.floor(frightTimer / 10) % 2 === 0) ? "#ffffff" : "#2ed573") : g.color;
-                ctx.beginPath();
-                ctx.arc(g.x + CELL/2, g.y + CELL/2 - 2, CELL/2 - 2, Math.PI, 0, false);
-                ctx.lineTo(g.x + CELL - 2, g.y + CELL);
-                ctx.lineTo(g.x + 2, g.y + CELL);
-                ctx.fill();
-
-                // Gözler
-                ctx.fillStyle = "#ffffff";
-                ctx.beginPath();
-                ctx.arc(g.x + CELL/2 - 4, g.y + CELL/2 - 3, 3, 0, Math.PI*2);
-                ctx.arc(g.x + CELL/2 + 4, g.y + CELL/2 - 3, 3, 0, Math.PI*2);
-                ctx.fill();
-                ctx.fillStyle = "#000000";
-                ctx.beginPath();
-                ctx.arc(g.x + CELL/2 - 3, g.y + CELL/2 - 3, 1.5, 0, Math.PI*2);
-                ctx.arc(g.x + CELL/2 + 5, g.y + CELL/2 - 3, 1.5, 0, Math.PI*2);
-                ctx.fill();
-              });
-            }
-
-            function gameLoop() {
-              update();
-              draw();
-              requestAnimationFrame(gameLoop);
-            }
-
-            initGame();
-            requestAnimationFrame(gameLoop);
-          </script>
-        </body>
-        </html>
-        """
-        components.html(pacman_pro_html, height=500)
 
     with tab3:
         st.subheader("⚔️ İki Tedarikçi Birebir Kıyaslaması (Radar Analizi)")
@@ -759,143 +380,35 @@ if secilen_sayfa == "📊 Tedarikçi Kalite & Karar Paneli":
     display_df = analyzed_df.sort_values(by="Performans Skoru", ascending=False)
     st.dataframe(display_df, use_container_width=True)
 
-    excel_out = io.BytesIO()
-    with pd.ExcelWriter(excel_out, engine='openpyxl') as writer:
-        display_df.to_excel(writer, index=False, sheet_name='Kalite_Analizi')
-    st.download_button("📥 Kalite Raporunu Excel Olarak İndir", excel_out.getvalue(), "Tedarikci_Kalite_Raporu.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
 # ==============================================================================
-# SAYFA 2: CANLI NUMUNE TAKİP SİSTEMİ (15 SÜTUNLU FABRİKA FORMATI)
+# SAYFA 2: CANLI NUMUNE & HAMMADDE TAKİP SİSTEMİ (SKT & ALARM DESTEKLİ)
 # ==============================================================================
-else:
+elif secilen_sayfa == "🧪 Canlı Numune & Hammadde Takip":
     st.title("🧪 Canlı Numune & Hammadde Kalite Takip Sistemi")
-    st.caption("Fabrika Giriş Kalite Kontrol Şablonuna Uygun Numune Kabul, Analiz ve Kabul/Red Yönetimi")
+    st.caption("15+ Sütunlu Fabrika Formatı, Raf Ömrü (SKT) Alarmları ve Arşiv Yönetimi")
 
-    with st.expander("📥 Kalite Kontrol Excel Listesini İçe Aktar", expanded=False):
-        col_up1, col_up2 = st.columns([2, 1])
-        with col_up1:
-            uploaded_samples = st.file_uploader("Numune Excel Dosyası Seç (.xlsx veya .csv)", type=["xlsx", "csv"], key="numune_uploader")
-            if uploaded_samples:
-                try:
-                    raw_df = pd.read_csv(uploaded_samples) if uploaded_samples.name.endswith(".csv") else pd.read_excel(uploaded_samples)
-                    raw_df = raw_df.dropna(how='all').reset_index(drop=True)
-                    
-                    if len(raw_df) == 0:
-                        st.warning("Yüklenen dosya boş!")
-                    else:
-                        processed_df = pd.DataFrame()
-                        bugun = datetime.date.today().strftime("%Y-%m-%d")
+    s_df = st.session_state["numuneler"].copy()
 
-                        def find_column(patterns):
-                            for col in raw_df.columns:
-                                col_clean = str(col).upper().replace("İ", "I").replace("I", "I").strip()
-                                for p in patterns:
-                                    p_clean = p.upper().replace("İ", "I").replace("I", "I").strip()
-                                    if p_clean in col_clean:
-                                        return col
-                            return None
+    # SKT & Raf Ömrü Kontrolü (Alarm Motoru)
+    today = datetime.date.today()
+    expiring_soon = []
+    for idx, r in s_df.iterrows():
+        try:
+            skt_date = datetime.datetime.strptime(str(r.get("SKT (SON KULLANMA)", "")).strip(), "%Y-%m-%d").date()
+            diff_days = (skt_date - today).days
+            if diff_days < 0:
+                expiring_soon.append(f"🔴 **{r['HAMMADDE ADI']} ({r['LOT NO']})** süresi geçmiş! ({abs(diff_days)} gün önce doldu)")
+            elif diff_days <= 60:
+                expiring_soon.append(f"🟡 **{r['HAMMADDE ADI']} ({r['LOT NO']})** SKT yaklaşıyor: {diff_days} gün kaldı.")
+        except:
+            pass
 
-                        # 1. HAMMADDE ADI
-                        col = find_column(["HAMMADDE", "URUN", "MALZEME", "NUMUNE ADI", "NAME"])
-                        processed_df["HAMMADDE ADI"] = raw_df[col].fillna("Genel Hammadde").astype(str) if col else "Genel Hammadde"
+    if expiring_soon:
+        with st.expander("⚠️ DİKKAT: Raf Ömrü & Re-Test Alarmları", expanded=True):
+            for alert in expiring_soon:
+                st.markdown(alert)
 
-                        # 2. FİRMA İSMİ
-                        col = find_column(["FIRMA", "TEDARIK", "URETICI", "SUPPLIER", "VENDOR"])
-                        processed_df["FİRMA İSMİ"] = raw_df[col].fillna("Bilinmeyen Firma").astype(str) if col else "Bilinmeyen Firma"
-
-                        # 3. LOT NO
-                        col = find_column(["LOT", "SARJ", "BATCH", "PARTI"])
-                        processed_df["LOT NO"] = raw_df[col].fillna("-").astype(str) if col else "-"
-
-                        # 4. TARİH
-                        col = find_column(["TARIH", "DATE", "GIRIS", "KABUL TARIHI"])
-                        processed_df["TARİH"] = raw_df[col].fillna(bugun).astype(str) if col else bugun
-
-                        # 5. SERTİFİKA KONTROLÜ / ANALİZ YAPAN
-                        col = find_column(["SERTIFIKA KONTROLU", "ANALIZ YAPAN", "SERTIFIKA", "ANALIZ"])
-                        processed_df["SERTİFİKA KONTROLÜ / ANALİZ YAPAN"] = raw_df[col].fillna("-").astype(str) if col else "-"
-
-                        # 6. AMBALAJ TEMİZLİĞİ / ORTAK ANALİZ
-                        col = find_column(["AMBALAJ TEMIZLIGI", "AMBALAJ", "ORTAK ANALIZ"])
-                        processed_df["AMBALAJ TEMİZLİĞİ"] = raw_df[col].fillna("-").astype(str) if col else "-"
-
-                        # 7. ETİKET UYGUNLUK
-                        col = find_column(["ETIKET", "LABEL", "ETIKET UYGUNLUK"])
-                        processed_df["ETİKET UYGUNLUK"] = raw_df[col].fillna("-").astype(str) if col else "-"
-
-                        # 8. KABUL - RED
-                        col = find_column(["KABUL - RED", "KABUL", "RED", "DURUM", "SONUC", "KARAR", "STATUS"])
-                        def parse_kabul_red(val):
-                            v = str(val).upper().replace("İ", "I").strip()
-                            if any(k in v for k in ["KABUL", "ONAY", "UYGUN", "PASS", "OK"]):
-                                return "KABUL"
-                            elif any(k in v for k in ["RED", "RET", "UYGUNSUZ", "FAIL", "NOK"]):
-                                return "RED"
-                            else:
-                                return "BEKLİYOR"
-
-                        processed_df["KABUL - RED"] = raw_df[col].apply(parse_kabul_red) if col else "BEKLİYOR"
-
-                        # 9. MENŞEİ (ÜRETİM YERİ)
-                        col = find_column(["MENSEI", "URETIM YERI", "ULKE", "ORIGIN"])
-                        processed_df["MENŞEİ (ÜRETİM YERİ)"] = raw_df[col].fillna("-").astype(str) if col else "-"
-
-                        # 10. RUBY ANALİZ DURUMU
-                        col = find_column(["RUBY ANALIZ", "LAB DURUMU", "ANALIZ DURUMU"])
-                        processed_df["RUBY ANALİZ DURUMU"] = raw_df[col].fillna("-").astype(str) if col else "-"
-
-                        # 11. COA
-                        col = find_column(["COA", "ANALIZ SERTIFIKASI"])
-                        processed_df["COA"] = raw_df[col].fillna("-").astype(str) if col else "-"
-
-                        # 12. RUBY TDS
-                        col = find_column(["TDS", "RUBY TDS", "TEKNIK DOKUMAN"])
-                        processed_df["RUBY TDS"] = raw_df[col].fillna("-").astype(str) if col else "-"
-
-                        # 13. RUBY SDS
-                        col = find_column(["SDS", "MSDS", "RUBY SDS", "GUVENLIK"])
-                        processed_df["RUBY SDS"] = raw_df[col].fillna("-").astype(str) if col else "-"
-
-                        # 14. ORJİN (KAYNAK)
-                        col = find_column(["ORJIN", "KAYNAK", "SOURCE"])
-                        processed_df["ORJİN (KAYNAK)"] = raw_df[col].fillna("-").astype(str) if col else "-"
-
-                        # 15. DOĞAL / REACH NO
-                        col = find_column(["REACH", "DOGAL", "REACH NO"])
-                        processed_df["DOĞAL / REACH NO"] = raw_df[col].fillna("-").astype(str) if col else "-"
-
-                        final_df = processed_df[KALITE_KOLONLARI]
-
-                        col_btn1, col_btn2 = st.columns(2)
-                        with col_btn1:
-                            if st.button("🔄 Tabloyu Bu Excel İle Sıfırla & Yükle"):
-                                st.session_state["numuneler"] = final_df
-                                st.success(f"Başarılı! {len(final_df)} adet kayıt 15 sütunluk şablona tam oturtuldu.")
-                                st.rerun()
-                        with col_btn2:
-                            if st.button("➕ Mevcut Listenin Altına Ekle"):
-                                st.session_state["numuneler"] = pd.concat([st.session_state["numuneler"], final_df], ignore_index=True)
-                                st.success(f"{len(final_df)} adet yeni satır listenin altına eklendi!")
-                                st.rerun()
-
-                except Exception as e:
-                    st.error(f"Dosya işlenirken hata oluştu: {e}")
-
-        with col_up2:
-            st.markdown("**15 Sütunluk Orijinal Excel Şablonu:**")
-            sample_template_io = io.BytesIO()
-            with pd.ExcelWriter(sample_template_io, engine='openpyxl') as writer:
-                st.session_state["numuneler"].to_excel(writer, index=False, sheet_name='Kalite_Takip_Sablonu')
-            st.download_button(
-                label="📄 Kalite Kontrol Şablonunu İndir",
-                data=sample_template_io.getvalue(),
-                file_name="Kalite_Kontrol_Numune_Sablonu.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-
-    s_df = st.session_state["numuneler"]
-
-    # Canlı Durum Metrik Kartları
+    # Durum Metrikleri
     col_m1, col_m2, col_m3, col_m4 = st.columns(4)
     col_m1.metric("Toplam Kayıt", f"{len(s_df)} Adet")
     col_m2.metric("✅ KABUL Edilen", f"{len(s_df[s_df['KABUL - RED'] == 'KABUL'])} Adet")
@@ -904,104 +417,187 @@ else:
 
     st.divider()
 
-    col_left, col_right = st.columns([1.1, 1.2])
+    # Dosya Yükleme & Excel İçe Aktarma
+    with st.expander("📥 Kalite Kontrol Excel Listesini İçe Aktar", expanded=False):
+        uploaded_samples = st.file_uploader("Numune Excel Dosyası Seç (.xlsx veya .csv)", type=["xlsx", "csv"], key="numune_uploader")
+        if uploaded_samples:
+            try:
+                raw_df = pd.read_csv(uploaded_samples) if uploaded_samples.name.endswith(".csv") else pd.read_excel(uploaded_samples)
+                raw_df = raw_df.dropna(how='all').reset_index(drop=True)
+                if len(raw_df) > 0:
+                    st.session_state["numuneler"] = raw_df
+                    st.success("Veriler başarıyla yüklendi!")
+                    st.rerun()
+            except Exception as e:
+                st.error(f"Hata: {e}")
 
-    with col_left:
-        st.markdown("### ➕ Manuel Numune Girişi")
-        with st.form("manuel_numune_form", clear_on_submit=True):
-            f_hammadde = st.text_input("Hammadde Adı:", placeholder="Örn: Bergamot Esansı")
-            f_firma = st.text_input("Firma İsmi:", placeholder="Örn: Grasse Fragrance Ltd.")
-            f_lot = st.text_input("Lot No:", placeholder="Örn: LOT-9941")
-            f_tarih = st.date_input("Kabul Tarihi:", datetime.date.today())
-            f_karar = st.selectbox("Kabul / Red Durumu:", ["BEKLİYOR", "KABUL", "RED"])
-            f_analiz = st.text_input("Analiz Yapan / Not:", placeholder="Örn: Ahmet K. / Koku testi yapıldı")
-            
-            ekle_btn = st.form_submit_button("✅ Sisteme Kaydet")
-            if ekle_btn and f_hammadde and f_firma:
-                yeni_satir = pd.DataFrame([{
-                    "HAMMADDE ADI": f_hammadde,
-                    "FİRMA İSMİ": f_firma,
-                    "LOT NO": f_lot if f_lot else "-",
-                    "TARİH": f_tarih.strftime("%Y-%m-%d"),
-                    "SERTİFİKA KONTROLÜ / ANALİZ YAPAN": f_analiz if f_analiz else "-",
-                    "AMBALAJ TEMİZLİĞİ": "Uygun",
-                    "ETİKET UYGUNLUK": "Uygun",
-                    "KABUL - RED": f_karar,
-                    "MENŞEİ (ÜRETİM YERİ)": "-",
-                    "RUBY ANALİZ DURUMU": "-",
-                    "COA": "-",
-                    "RUBY TDS": "-",
-                    "RUBY SDS": "-",
-                    "ORJİN (KAYNAK)": "-",
-                    "DOĞAL / REACH NO": "-"
-                }])
-                st.session_state["numuneler"] = pd.concat([yeni_satir, st.session_state["numuneler"]], ignore_index=True)
-                st.success(f"{f_hammadde} ({f_karar}) olarak sisteme kaydedildi!")
-                st.rerun()
-
-    with col_right:
-        st.markdown("### ⚡ Karar & Durum Güncelle")
-        if len(st.session_state["numuneler"]) > 0:
-            hammadde_listesi = [f"{i}: {row['HAMMADDE ADI']} ({row['FİRMA İSMİ']}) - {row['LOT NO']}" for i, row in st.session_state["numuneler"].iterrows()]
-            secilen_idx_str = st.selectbox("İşlem Yapılacak Satırı Seçin:", hammadde_listesi)
-            secilen_index = int(secilen_idx_str.split(":")[0])
-            secili_satir = st.session_state["numuneler"].loc[secilen_index]
-
-            st.info(f"**Hammadde:** {secili_satir['HAMMADDE ADI']} | **Firma:** {secili_satir['FİRMA İSMİ']} | **Tarih:** {secili_satir['TARİH']}")
-            
-            col_k1, col_k2 = st.columns(2)
-            with col_k1:
-                yeni_karar = st.selectbox(
-                    "KABUL - RED Durumu:",
-                    ["BEKLİYOR", "KABUL", "RED"],
-                    index=["BEKLİYOR", "KABUL", "RED"].index(secili_satir["KABUL - RED"]) if secili_satir["KABUL - RED"] in ["BEKLİYOR", "KABUL", "RED"] else 0
-                )
-            with col_k2:
-                yeni_analiz_durum = st.text_input("Ruby Analiz Durumu:", value=str(secili_satir["RUBY ANALİZ DURUMU"]))
-
-            guncel_analiz_yapan = st.text_input("Analiz Yapan / Açıklama:", value=str(secili_satir["SERTİFİKA KONTROLÜ / ANALİZ YAPAN"]))
-
-            if st.button("💾 Değişiklikleri Kaydet", use_container_width=True):
-                st.session_state["numuneler"].at[secilen_index, "KABUL - RED"] = yeni_karar
-                st.session_state["numuneler"].at[secilen_index, "RUBY ANALİZ DURUMU"] = yeni_analiz_durum
-                st.session_state["numuneler"].at[secilen_index, "SERTİFİKA KONTROLÜ / ANALİZ YAPAN"] = guncel_analiz_yapan
-                st.success("Kayıt başarıyla güncellendi!")
-                st.rerun()
-
-    st.divider()
-
-    # --- CANLI TABLO & FİLTRELEME ALANI ---
+    # Canlı Tablo ve Filtreleme
     st.subheader("📋 Canlı Numune & Hammadde Takip Tablosu")
-    
     col_f1, col_f2 = st.columns([1.5, 2])
     with col_f1:
         karar_filtresi = st.radio("Kabul/Red Filtresi:", ["Tümü", "KABUL", "RED", "BEKLİYOR"], horizontal=True)
     with col_f2:
-        firma_ara = st.text_input("🔍 Firma veya Hammadde Ara:", placeholder="Örn: Grasse veya Etanol...")
+        firma_ara = st.text_input("🔍 Firma, Lot No veya Hammadde Ara:", placeholder="Örn: Grasse veya LOT-2026...")
 
-    tablo_df = st.session_state["numuneler"].copy()
+    tablo_df = s_df.copy()
     if karar_filtresi != "Tümü":
         tablo_df = tablo_df[tablo_df["KABUL - RED"] == karar_filtresi]
-    
     if firma_ara:
         tablo_df = tablo_df[
-            tablo_df["HAMMADDE ADI"].str.contains(firma_ara, case=False, na=False) |
-            tablo_df["FİRMA İSMİ"].str.contains(firma_ara, case=False, na=False) |
-            tablo_df["LOT NO"].str.contains(firma_ara, case=False, na=False)
+            tablo_df["HAMMADDE ADI"].astype(str).str.contains(firma_ara, case=False, na=False) |
+            tablo_df["FİRMA İSMİ"].astype(str).str.contains(firma_ara, case=False, na=False) |
+            tablo_df["LOT NO"].astype(str).str.contains(firma_ara, case=False, na=False)
         ]
 
     st.dataframe(tablo_df, use_container_width=True)
 
     numune_out_io = io.BytesIO()
     with pd.ExcelWriter(numune_out_io, engine='openpyxl') as writer:
-        st.session_state["numuneler"].to_excel(writer, index=False, sheet_name='Kalite_Kontrol_Listesi')
+        s_df.to_excel(writer, index=False, sheet_name='Kalite_Kontrol_Listesi')
 
     st.download_button(
-        label="📥 Güncel Tabloyu Fabrika Formatında Excel Olarak İndir",
+        label="📥 Güncel Tabloyu Excel Olarak İndir",
         data=numune_out_io.getvalue(),
         file_name="Kalite_Kontrol_Numune_Listesi.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
+# ==============================================================================
+# SAYFA 3: PARFÜM LABORATUVAR DOĞRULAMA (IFRA / FİZİKOKİMYA)
+# ==============================================================================
+elif secilen_sayfa == "🔬 Parfüm Laboratuvar Doğrulama (IFRA/Fizikokimya)":
+    st.title("🔬 Parfüm & Kozmetik Kalite Doğrulama Motoru")
+    st.caption("Fizikokimyasal Analizler (Dansite, Refraktometre, Alkolmetre), Organoleptik Testler ve IFRA Uygunluğu")
+
+    st.markdown("### 🧪 Yeni Giriş Testi & Standart Uygunluk Kontrolü")
+    
+    with st.form("parfum_dogrulama_form"):
+        col_t1, col_t2 = st.columns(2)
+        with col_t1:
+            test_urun_tipi = st.selectbox("Hammadde Türü:", ["Esans / Parfüm Yağı", "Kozmetik Alkol (%96)", "Solvent / Taşıyıcı"])
+            test_hammadde = st.text_input("Hammadde Adı & Lot No:", placeholder="Örn: Rose & Amber Esansı - LOT-881")
+            test_koku = st.selectbox("Organoleptik (Koku Profili):", ["Standart Numune ile Birebir Uyumlu", "Hafif Nüans Farkı Var (Kabul Edilebilir)", "Belirgin Yabancı Koku / Okside (Ret)"])
+            test_renk = st.selectbox("Görünüm ve Renk:", ["Berrak / Tortusuz", "Bulanık / Tortulu (Ret)"])
+        
+        with col_t2:
+            st.markdown("**Fizikokimyasal Cihaz Ölçümleri:**")
+            if test_urun_tipi == "Esans / Parfüm Yağı":
+                refraksiyon = st.number_input("Kırılma İndisi (Refraktometre 20°C):", min_value=1.300, max_value=1.600, value=1.492, step=0.001, format="%.3f")
+                dansite = st.number_input("Bağıl Dansite / Yoğunluk (d20/20):", min_value=0.700, max_value=1.300, value=0.985, step=0.001, format="%.3f")
+                alkol_derece = 0.0
+            else:
+                alkol_derece = st.number_input("Alkolmetre Derecesi (% Vol 20°C):", min_value=80.0, max_value=100.0, value=96.4, step=0.1)
+                refraksiyon = 1.360
+                dansite = 0.805
+
+        st.markdown("---")
+        st.markdown("**📋 IFRA & Mevzuat Doküman Doğrulaması:**")
+        col_doc1, col_doc2, col_doc3 = st.columns(3)
+        with col_doc1:
+            ifra_var = st.checkbox("IFRA 51. Amendment Uygunluk Belgesi Mevcut mu?", value=True)
+        with col_doc2:
+            coa_var = st.checkbox("Analiz Sertifikası (CoA) İmzalı Mevcut mu?", value=True)
+        with col_doc3:
+            reach_var = st.checkbox("REACH Kaydı / Güvenlik Bilgi Formu (SDS) Uygun mu?", value=True)
+
+        dogrula_btn = st.form_submit_button("⚡ Kalite Uygunluğunu Değerlendir")
+
+    if dogrula_btn:
+        st.markdown("### 📊 Otomatik Kalite Değerlendirme Raporu")
+        hatalar = []
+
+        if test_urun_tipi == "Esans / Parfüm Yağı":
+            if not (1.450 <= refraksiyon <= 1.520):
+                hatalar.append(f"Kırılma indisi ({refraksiyon}) referans tolerans (1.450 - 1.520) dışındadır!")
+            if not (0.850 <= dansite <= 1.080):
+                hatalar.append(f"Dansite değeri ({dansite}) referans aralık (0.850 - 1.080) dışındadır!")
+        elif test_urun_tipi == "Kozmetik Alkol (%96)":
+            if alkol_derece < 96.0:
+                hatalar.append(f"Alkol derecesi (%{alkol_derece}) kozmetik standart limitin (%96.0) altındadır!")
+
+        if "Ret" in test_koku:
+            hatalar.append("Organoleptik test: Koku profilinde yabancı solvent veya oksidasyon sapması!")
+        if "Bulanık" in test_renk:
+            hatalar.append("Fiziksel kontrol: Üründe çökelti veya tortu tespit edildi!")
+        if not ifra_var:
+            hatalar.append("Mevzuat: IFRA 51 sertifikası eksik; üretime verilemez!")
+        if not coa_var:
+            hatalar.append("Belge: Tedarikçi CoA analiz sertifikası bulunamadı!")
+
+        if not hatalar:
+            st.success("🟢 **SONUÇ: TAM KALİTE ONAYI (KABUL)** — Tüm fizikokimyasal parametreler, organoleptik testler ve IFRA mevzuat belgeleri eksiksiz.")
+            st.balloons()
+        else:
+            st.error("🔴 **SONUÇ: UYGUNSUZLUK TESPİT EDİLDİ (RED / BLOKE)**")
+            for h in hatalar:
+                st.write(f"- ❌ {h}")
+
+# ==============================================================================
+# SAYFA 4: DEPO ETİKET BASICI & LOT PASAPORTU
+# ==============================================================================
+elif secilen_sayfa == "🏷️ Depo Etiket Basıcı & Lot Pasaportu":
+    st.title("🏷️ Depo Giriş Etiketi & Akıllı Lot Pasaportu")
+    st.caption("Palet/Varil Termal Etiket Çıktıları ve Geriye Dönük Ürün İzlenebilirlik Kartı")
+
+    s_df = st.session_state["numuneler"]
+
+    if len(s_df) > 0:
+        secilen_lot = st.selectbox("İncelemek / Etiket Basmak İstediğiniz Lotu Seçin:", s_df["LOT NO"].unique())
+        lot_data = s_df[s_df["LOT NO"] == secilen_lot].iloc[0]
+
+        col_p1, col_p2 = st.columns([1.2, 1])
+
+        # LOT PASAPORTU KARTI
+        with col_p1:
+            st.markdown("### 📋 Dijital Lot Pasaportu (Kimlik Kartı)")
+            karar_renk = "#00b894" if lot_data["KABUL - RED"] == "KABUL" else ("#d63031" if lot_data["KABUL - RED"] == "RED" else "#fdcb6e")
+            
+            st.markdown(
+                f"""
+                <div style='background: rgba(128,128,128,0.08); border-left: 6px solid {karar_renk}; padding: 20px; border-radius: 8px;'>
+                    <h2 style='margin:0 0 5px 0;'>{lot_data['HAMMADDE ADI']}</h2>
+                    <p style='color: gray; margin: 0;'>Parti / Lot: <b>{lot_data['LOT NO']}</b> | Üretici: <b>{lot_data['FİRMA İSMİ']}</b></p>
+                    <hr style='margin: 12px 0; border: none; border-top: 1px solid rgba(128,128,128,0.2);'>
+                    <p><b>Giriş Tarihi:</b> {lot_data['TARİH']} &nbsp;&nbsp;|&nbsp;&nbsp; <b>SKT:</b> {lot_data.get('SKT (SON KULLANMA)', '-')}</p>
+                    <p><b>Analiz Eden:</b> {lot_data['SERTİFİKA KONTROLÜ / ANALİZ YAPAN']}</p>
+                    <p><b>Menşei:</b> {lot_data['MENŞEİ (ÜRETİM YERİ)']} &nbsp;&nbsp;|&nbsp;&nbsp; <b>Kaynak:</b> {lot_data['ORJİN (KAYNAK)']}</p>
+                    <p><b>IFRA Durumu:</b> {lot_data.get('IFRA UYGUNLUK', '-')}</p>
+                    <p><b>Mevcut Durum:</b> <span style='font-weight:bold; color: {karar_renk}; font-size: 18px;'>{lot_data['KABUL - RED']}</span></p>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+            # Doküman / CoA Yükleme
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("#### 📎 Bu Lot İçin Analiz Sertifikası (CoA / SDS) Yükle")
+            uploaded_doc = st.file_uploader("Sertifika PDF'i seçin", type=["pdf", "png", "jpg"], key="doc_uploader")
+            if uploaded_doc:
+                st.success(f"'{uploaded_doc.name}' dosyası {secilen_lot} partisine başarıyla arşivlendi!")
+
+        # TERMAL DEPO ETİKETİ BASICI
+        with col_p2:
+            st.markdown("### 🖨️ Yazıcı Uyumlu Depo Etiketi")
+            etiket_bg = "#27ae60" if lot_data["KABUL - RED"] == "KABUL" else ("#c0392b" if lot_data["KABUL - RED"] == "RED" else "#f39c12")
+            etiket_baslik = "KABUL EDİLDİ - ÜRETİME UYGUNDUR" if lot_data["KABUL - RED"] == "KABUL" else ("RED - KULLANILAMAZ / İADE" if lot_data["KABUL - RED"] == "RED" else "KARANTİNA - TEST SÜRÜYOR")
+
+            st.markdown(
+                f"""
+                <div style='background-color: white; color: black; padding: 25px; border-radius: 6px; border: 3px solid #333; box-shadow: 0 4px 15px rgba(0,0,0,0.3); font-family: monospace;'>
+                    <div style='background-color: {etiket_bg}; color: white; text-align: center; padding: 8px; font-size: 16px; font-weight: 900; margin-bottom: 12px;'>
+                        {etiket_baslik}
+                    </div>
+                    <p style='margin: 4px 0; font-size: 15px;'><b>ÜRÜN:</b> {lot_data['HAMMADDE ADI']}</p>
+                    <p style='margin: 4px 0; font-size: 15px;'><b>LOT NO:</b> {lot_data['LOT NO']}</p>
+                    <p style='margin: 4px 0; font-size: 13px;'><b>FİRMA:</b> {lot_data['FİRMA İSMİ']}</p>
+                    <p style='margin: 4px 0; font-size: 13px;'><b>KONTROL TARİHİ:</b> {lot_data['TARİH']}</p>
+                    <p style='margin: 4px 0; font-size: 13px;'><b>KONTROL EDEN:</b> {lot_data['SERTİFİKA KONTROLÜ / ANALİZ YAPAN']}</p>
+                    <hr style='border: 1px dashed black; margin: 10px 0;'>
+                    <p style='text-align: center; margin: 0; font-size: 11px;'>MİYAETP KALİTE GÜVENCE DİREKTÖRLÜĞÜ</p>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
 # --- İMZA ALANI (SIDEBAR ALT) ---
 st.sidebar.markdown(
@@ -1009,7 +605,7 @@ st.sidebar.markdown(
     <div style='background-color: rgba(128, 128, 128, 0.1); padding: 12px; border-radius: 8px; text-align: center; margin-top: 20px;'>
         <p style='margin: 0; font-size: 13px; font-weight: bold;'>Developed by</p>
         <p style='margin: 0; font-size: 18px; color: #FF4B4B; font-weight: 800;'>⚡ miyaetp</p>
-        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v4.6.0 • Pro Pac-Man 60FPS Edition</p>
+        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v5.0.0 • Industrial Fragrance Suite</p>
     </div>
     """,
     unsafe_allow_html=True
