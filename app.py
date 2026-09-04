@@ -1,8 +1,7 @@
 import io
-import time
-import random
 import datetime
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import numpy as np
 import plotly.express as px
@@ -99,17 +98,7 @@ if not st.session_state["authenticated"]:
         st.caption("⚡ Developed by **miyaetp**")
     st.stop()
 
-# --- 3. REFLEKS OYUNU DURUM YÖNETİMİ ---
-if "click_score" not in st.session_state:
-    st.session_state["click_score"] = 0
-if "target_pos" not in st.session_state:
-    st.session_state["target_pos"] = random.randint(0, 8)
-if "last_click_time" not in st.session_state:
-    st.session_state["last_click_time"] = time.time()
-if "reaction_speed" not in st.session_state:
-    st.session_state["reaction_speed"] = 0
-
-# --- 4. FABRİKA KALİTE NUMUNE ŞABLON YAPISI (15 SÜTUN) ---
+# --- 3. FABRİKA KALİTE NUMUNE ŞABLON YAPISI (15 SÜTUN) ---
 KALITE_KOLONLARI = [
     "HAMMADDE ADI",
     "FİRMA İSMİ",
@@ -183,7 +172,7 @@ if "numuneler" not in st.session_state:
         }
     ])
 
-# --- 5. TEDARİKÇİ ERP VERİLERİ ---
+# --- 4. TEDARİKÇİ ERP VERİLERİ ---
 @st.cache_data
 def get_sample_data():
     return pd.DataFrame({
@@ -296,11 +285,11 @@ if secilen_sayfa == "📊 Tedarikçi Kalite & Karar Paneli":
 
     st.divider()
 
-    # YENİLENEN SEKMELER (REFLEKS OYUNU EKLİ)
-    tab1, tab2, tab_game, tab3, tab4, tab5 = st.tabs([
+    # YENİLENEN SEKMELER (PAC-MAN EKLENDİ)
+    tab1, tab2, tab_pacman, tab3, tab4, tab5 = st.tabs([
         "📊 Genel Kalite Sıralaması",
         "🎯 Harcama & Risk Matrisi",
-        "⚡ Kusurlu Parça Avcısı",
+        "🕹️ Pac-Man Mola Odası",
         "⚔️ İki Tedarikçi Kıyaslama",
         "📈 6 Aylık Trend & Karne",
         "📄 Resmi DÖF & İhtar Mektubu"
@@ -342,48 +331,239 @@ if secilen_sayfa == "📊 Tedarikçi Kalite & Karar Paneli":
             fig_scatter.update_layout(height=400, margin=dict(l=20, r=20, t=30, b=20))
             st.plotly_chart(fig_scatter, use_container_width=True)
 
-    # --- REFLEKS OYUNU SEKRESİ ---
-    with tab_game:
-        st.subheader("⚡ Kusurlu Parça Avcısı (Kalite Refleks Oyunu)")
-        st.caption("Banttan geçen sağlam ürünler (🟢) arasındaki kusurlu kırmızı parçayı (🔴) en hızlı şekilde yakalayın!")
+    # --- PAC-MAN OYUNU SEKRESİ ---
+    with tab_pacman:
+        st.subheader("🕹️ Retro Pac-Man Kalite Mola Alanı")
+        st.caption("Yön tuşları veya W, A, S, D tuşlarını kullanarak Pac-Man'i yönlendirin, hayaletlerden kaçın!")
 
-        col_gm1, col_gm2, col_gm3 = st.columns(3)
-        col_gm1.metric("🎯 Yakalanan Kusurlu Parça", f"{st.session_state['click_score']} Adet")
-        col_gm2.metric("⚡ Son Tepki Hızı", f"{st.session_state['reaction_speed']:.2f} sn" if st.session_state['reaction_speed'] > 0 else "-")
-        if col_gm3.button("🔄 Sıfırla"):
-            st.session_state["click_score"] = 0
-            st.session_state["reaction_speed"] = 0
-            st.session_state["target_pos"] = random.randint(0, 8)
-            st.session_state["last_click_time"] = time.time()
-            st.rerun()
+        pacman_html = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body {
+              margin: 0;
+              background-color: #0d1117;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              color: white;
+            }
+            #hud {
+              display: flex;
+              gap: 30px;
+              font-size: 20px;
+              font-weight: bold;
+              margin-bottom: 10px;
+            }
+            .score-box { color: #f1c40f; }
+            .lives-box { color: #e74c3c; }
+            canvas {
+              border: 3px solid #34495e;
+              border-radius: 8px;
+              background-color: #000;
+              box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+            }
+            .btn-reset {
+              margin-top: 12px;
+              padding: 8px 20px;
+              background-color: #e67e22;
+              border: none;
+              color: white;
+              font-weight: bold;
+              border-radius: 6px;
+              cursor: pointer;
+            }
+            .btn-reset:hover { background-color: #d35400; }
+          </style>
+        </head>
+        <body>
+          <div id="hud">
+            <div class="score-box">SKOR: <span id="score">0</span></div>
+            <div class="lives-box">CAN: <span id="lives">3</span></div>
+          </div>
+          <canvas id="pacman" width="380" height="380"></canvas>
+          <button class="btn-reset" onclick="resetGame()">Yeni Oyun Başlat</button>
 
-        st.markdown("---")
+          <script>
+            const canvas = document.getElementById("pacman");
+            const ctx = canvas.getContext("2d");
+            const scoreEl = document.getElementById("score");
+            const livesEl = document.getElementById("lives");
 
-        # 3x3 Kalite Kontrol Izgarası
-        grid_cols = st.columns(3)
-        target = st.session_state["target_pos"]
+            const CELL = 20;
+            const ROWS = 19;
+            const COLS = 19;
 
-        for i in range(9):
-            col = grid_cols[i % 3]
-            with col:
-                if i == target:
-                    # Kırmızı Kusurlu Hedef
-                    if st.button("🔴 KUSURLU!", key=f"target_btn_{i}", use_container_width=True, type="primary"):
-                        now = time.time()
-                        st.session_state["reaction_speed"] = now - st.session_state["last_click_time"]
-                        st.session_state["last_click_time"] = now
-                        st.session_state["click_score"] += 1
-                        
-                        # Yeni rastgele pozisyon
-                        available = [x for x in range(9) if x != target]
-                        st.session_state["target_pos"] = random.choice(available)
-                        st.rerun()
-                else:
-                    # Yeşil Sağlam Parçalar
-                    if st.button("🟢 Sağlam", key=f"safe_btn_{i}", use_container_width=True):
-                        st.session_state["click_score"] = max(0, st.session_state["click_score"] - 1)
-                        st.toast("⚠️ Sağlam ürüne tıkladınız! -1 Puan")
-                        st.rerun()
+            let map = [
+              [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+              [1,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,1],
+              [1,2,1,1,2,1,1,1,2,1,2,1,1,1,2,1,1,2,1],
+              [1,2,1,1,2,1,1,1,2,1,2,1,1,1,2,1,1,2,1],
+              [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+              [1,2,1,1,2,1,2,1,1,1,1,1,2,1,2,1,1,2,1],
+              [1,2,2,2,2,1,2,2,2,1,2,2,2,1,2,2,2,2,1],
+              [1,1,1,1,2,1,1,1,0,1,0,1,1,1,2,1,1,1,1],
+              [0,0,0,1,2,1,0,0,0,0,0,0,0,1,2,1,0,0,0],
+              [1,1,1,1,2,1,0,1,1,0,1,1,0,1,2,1,1,1,1],
+              [0,0,0,0,2,0,0,1,0,0,0,1,0,0,2,0,0,0,0],
+              [1,1,1,1,2,1,0,1,1,1,1,1,0,1,2,1,1,1,1],
+              [0,0,0,1,2,1,0,0,0,0,0,0,0,1,2,1,0,0,0],
+              [1,1,1,1,2,1,2,1,1,1,1,1,2,1,2,1,1,1,1],
+              [1,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,1],
+              [1,2,1,1,2,1,1,1,2,1,2,1,1,1,2,1,1,2,1],
+              [1,2,2,1,2,2,2,2,2,0,2,2,2,2,2,1,2,2,1],
+              [1,1,2,1,2,1,2,1,1,1,1,1,2,1,2,1,2,1,1],
+              [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+            ];
+
+            let originalMap = JSON.parse(JSON.stringify(map));
+            let score = 0;
+            let lives = 3;
+            let gameOver = false;
+
+            let pacman = { x: 9, y: 16, dx: 0, dy: 0, nextDx: 0, nextDy: 0, mouth: 0.2, mouthSpeed: 0.03 };
+            let ghosts = [
+              { x: 9, y: 9, dx: 1, dy: 0, color: "#e74c3c" },
+              { x: 9, y: 10, dx: -1, dy: 0, color: "#3498db" },
+              { x: 8, y: 9, dx: 0, dy: 1, color: "#e67e22" }
+            ];
+
+            function resetPositions() {
+              pacman.x = 9; pacman.y = 16;
+              pacman.dx = 0; pacman.dy = 0;
+              pacman.nextDx = 0; pacman.nextDy = 0;
+              ghosts[0].x = 9; ghosts[0].y = 9; ghosts[0].dx = 1; ghosts[0].dy = 0;
+              ghosts[1].x = 9; ghosts[1].y = 10; ghosts[1].dx = -1; ghosts[1].dy = 0;
+              ghosts[2].x = 8; ghosts[2].y = 9; ghosts[2].dx = 0; ghosts[2].dy = 1;
+            }
+
+            function resetGame() {
+              map = JSON.parse(JSON.stringify(originalMap));
+              score = 0;
+              lives = 3;
+              gameOver = false;
+              scoreEl.innerText = score;
+              livesEl.innerText = lives;
+              resetPositions();
+            }
+
+            window.addEventListener("keydown", (e) => {
+              if (["ArrowUp", "KeyW"].includes(e.code)) { pacman.nextDx = 0; pacman.nextDy = -1; e.preventDefault(); }
+              if (["ArrowDown", "KeyS"].includes(e.code)) { pacman.nextDx = 0; pacman.nextDy = 1; e.preventDefault(); }
+              if (["ArrowLeft", "KeyA"].includes(e.code)) { pacman.nextDx = -1; pacman.nextDy = 0; e.preventDefault(); }
+              if (["ArrowRight", "KeyD"].includes(e.code)) { pacman.nextDx = 1; pacman.nextDy = 0; e.preventDefault(); }
+            });
+
+            function canMove(x, y, dx, dy) {
+              let nx = x + dx;
+              let ny = y + dy;
+              if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) return false;
+              return map[ny][nx] !== 1;
+            }
+
+            function update() {
+              if (gameOver) return;
+
+              if (canMove(pacman.x, pacman.y, pacman.nextDx, pacman.nextDy)) {
+                pacman.dx = pacman.nextDx;
+                pacman.dy = pacman.nextDy;
+              }
+
+              if (canMove(pacman.x, pacman.y, pacman.dx, pacman.dy)) {
+                pacman.x += pacman.dx;
+                pacman.y += pacman.dy;
+              }
+
+              if (map[pacman.y][pacman.x] === 2) {
+                map[pacman.y][pacman.x] = 0;
+                score += 10;
+                scoreEl.innerText = score;
+              }
+
+              // Hayalet Hareketi
+              ghosts.forEach(g => {
+                let directions = [
+                  {dx: 1, dy: 0}, {dx: -1, dy: 0},
+                  {dx: 0, dy: 1}, {dx: 0, dy: -1}
+                ];
+                let valid = directions.filter(d => canMove(g.x, g.y, d.dx, d.dy));
+                if (valid.length > 0) {
+                  let chosen = valid[Math.floor(Math.random() * valid.length)];
+                  g.x += chosen.dx;
+                  g.y += chosen.dy;
+                }
+
+                if (Math.abs(g.x - pacman.x) <= 0.6 && Math.abs(g.y - pacman.y) <= 0.6) {
+                  lives--;
+                  livesEl.innerText = lives;
+                  if (lives <= 0) {
+                    gameOver = true;
+                    alert("OYUN BİTTİ! Toplam Skor: " + score);
+                  } else {
+                    resetPositions();
+                  }
+                }
+              });
+
+              pacman.mouth += pacman.mouthSpeed;
+              if (pacman.mouth > 0.35 || pacman.mouth < 0.05) {
+                pacman.mouthSpeed = -pacman.mouthSpeed;
+              }
+            }
+
+            function draw() {
+              ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+              // Labirenti Çiz
+              for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                  if (map[r][c] === 1) {
+                    ctx.fillStyle = "#1e3799";
+                    ctx.fillRect(c * CELL, r * CELL, CELL, CELL);
+                  } else if (map[r][c] === 2) {
+                    ctx.fillStyle = "#f8c291";
+                    ctx.beginPath();
+                    ctx.arc(c * CELL + CELL / 2, r * CELL + CELL / 2, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                  }
+                }
+              }
+
+              // Pac-Man Çiz
+              ctx.fillStyle = "#f1c40f";
+              ctx.beginPath();
+              let angle = 0;
+              if (pacman.dx === 1) angle = 0;
+              if (pacman.dx === -1) angle = Math.PI;
+              if (pacman.dy === 1) angle = Math.PI / 2;
+              if (pacman.dy === -1) angle = -Math.PI / 2;
+
+              let startAngle = angle + pacman.mouth;
+              let endAngle = angle + Math.PI * 2 - pacman.mouth;
+              ctx.arc(pacman.x * CELL + CELL / 2, pacman.y * CELL + CELL / 2, CELL / 2 - 1, startAngle, endAngle);
+              ctx.lineTo(pacman.x * CELL + CELL / 2, pacman.y * CELL + CELL / 2);
+              ctx.fill();
+
+              // Hayaletleri Çiz
+              ghosts.forEach(g => {
+                ctx.fillStyle = g.color;
+                ctx.beginPath();
+                ctx.arc(g.x * CELL + CELL / 2, g.y * CELL + CELL / 2, CELL / 2 - 2, 0, Math.PI * 2);
+                ctx.fill();
+              });
+            }
+
+            setInterval(() => {
+              update();
+              draw();
+            }, 180);
+          </script>
+        </body>
+        </html>
+        """
+        components.html(pacman_html, height=500)
 
     with tab3:
         st.subheader("⚔️ İki Tedarikçi Birebir Kıyaslaması (Radar Analizi)")
@@ -684,7 +864,7 @@ st.sidebar.markdown(
     <div style='background-color: rgba(128, 128, 128, 0.1); padding: 12px; border-radius: 8px; text-align: center; margin-top: 20px;'>
         <p style='margin: 0; font-size: 13px; font-weight: bold;'>Developed by</p>
         <p style='margin: 0; font-size: 18px; color: #FF4B4B; font-weight: 800;'>⚡ miyaetp</p>
-        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v4.4.0 • Reflex Defect Hunter</p>
+        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v4.5.0 • Pac-Man Retro Edition</p>
     </div>
     """,
     unsafe_allow_html=True
