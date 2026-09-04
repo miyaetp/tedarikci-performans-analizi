@@ -6,7 +6,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 
-# 1. Sayfa Yapılandırması
+# 1. Sayfa Yapılandırması (Sol Menü Daima Açık Başlar)
 st.set_page_config(
     page_title="Kalite & Numune Yönetim Sistemi | miyaetp",
     page_icon="⚡",
@@ -14,61 +14,59 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- TÜM STREAMLIT & GITHUB REKLAMLARINI GİZLEME + ŞEKİLLİ SOL MENÜ ANİMASYONU ---
-hide_and_style_css = """
+# --- SOL MENÜ AÇMA BUTONUNU EKRANA ÇAKAN VE ASLA KAYBETMEYEN CSS ---
+sidebar_fix_css = """
     <style>
-    /* Üst menü ve footer reklamlarını gizle */
-    #MainMenu {visibility: hidden; display: none !important;}
-    header {background: transparent !important;}
-    footer {visibility: hidden; display: none !important;}
-    
-    /* GitHub rozetleri ve alt toolbar tamamen yok */
+    /* Reklam ve gereksiz Streamlit öğelerini gizle */
+    #MainMenu {visibility: hidden !important;}
+    footer {visibility: hidden !important;}
     .viewerBadge_container__1QSob,
     .viewerBadge_link__1S137,
     [data-testid="stStatusWidget"],
-    [data-testid="stToolbar"],
     [data-testid="manage-app-button"] {
-        visibility: hidden !important;
         display: none !important;
     }
 
-    /* Sol menü açma/kapama butonuna şekilli neon & animasyonlu tasarım */
-    [data-testid="stSidebarCollapseButton"] {
+    /* Header'ı yok etme, şeffaf yap ki sol menü açma oku yok olmasın! */
+    header[data-testid="stHeader"] {
+        background-color: transparent !important;
+        z-index: 10000 !important;
+    }
+
+    /* Sol menü açma okunu ekranda parlayan kırmızı şık bir butona çevir */
+    [data-testid="stSidebarCollapseButton"], 
+    button[data-testid="baseButton-headerNoPadding"],
+    [data-testid="collapsedControl"] {
         visibility: visible !important;
         display: flex !important;
+        position: fixed !important;
+        top: 14px !important;
+        left: 14px !important;
+        z-index: 999999 !important;
+        background: #FF4B4B !important;
+        color: #ffffff !important;
+        border-radius: 8px !important;
+        box-shadow: 0 0 15px rgba(255, 75, 75, 0.7) !important;
+        width: 38px !important;
+        height: 38px !important;
         align-items: center !important;
         justify-content: center !important;
-        background: linear-gradient(135deg, #1f2430 0%, #0e1117 100%) !important;
-        border: 1px solid rgba(255, 75, 75, 0.4) !important;
-        box-shadow: 0 4px 15px rgba(255, 75, 75, 0.25) !important;
-        border-radius: 10px !important;
-        padding: 6px !important;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        color: #ff4b4b !important;
+        cursor: pointer !important;
     }
-
-    /* Üzerine gelince parlasın, büyüsün ve sağa doğru atsın */
-    [data-testid="stSidebarCollapseButton"]:hover {
-        transform: scale(1.12) translateX(3px) !important;
-        border-color: #ff4b4b !important;
-        box-shadow: 0 0 20px rgba(255, 75, 75, 0.6) !important;
-        background: linear-gradient(135deg, #ff4b4b 0%, #b81d24 100%) !important;
-        color: #ffffff !important;
-    }
-
-    /* Menü açılıp kapanırken pürüzsüz kayma animasyonu */
-    section[data-testid="stSidebar"] {
-        transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), width 0.4s ease !important;
-        border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+    
+    [data-testid="stSidebarCollapseButton"] svg, 
+    [data-testid="collapsedControl"] svg {
+        fill: white !important;
+        stroke: white !important;
     }
 
     .block-container {
-        padding-top: 1.5rem !important;
+        padding-top: 2rem !important;
         padding-bottom: 2rem !important;
     }
     </style>
 """
-st.markdown(hide_and_style_css, unsafe_allow_html=True)
+st.markdown(sidebar_fix_css, unsafe_allow_html=True)
 
 # --- 2. GÜVENLİK VE GİRİŞ EKRANI (AUTHENTICATION) ---
 SISTEM_SIFRESI = "miya123"
@@ -662,7 +660,7 @@ st.sidebar.markdown(
     <div style='background-color: rgba(128, 128, 128, 0.1); padding: 12px; border-radius: 8px; text-align: center; margin-top: 20px;'>
         <p style='margin: 0; font-size: 13px; font-weight: bold;'>Developed by</p>
         <p style='margin: 0; font-size: 18px; color: #FF4B4B; font-weight: 800;'>⚡ miyaetp</p>
-        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v4.1.0 • Animated Sidebar & Factory Edition</p>
+        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v4.2.0 • Fixed Header Edition</p>
     </div>
     """,
     unsafe_allow_html=True
