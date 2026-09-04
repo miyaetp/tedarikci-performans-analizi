@@ -1,5 +1,4 @@
 import io
-import math
 import datetime
 import streamlit as st
 import pandas as pd
@@ -7,17 +6,18 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 
-# 1. Sayfa Yapılandırması
+# 1. Sayfa Yapılandırması (Sol Menü Daima Açık Başlar)
 st.set_page_config(
-    page_title="Kalite Güvence & Proses Kontrol Sistemi | miyaetp",
+    page_title="Kalite & Numune Yönetim Sistemi | miyaetp",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# --- SOL MENÜ AÇMA BUTONUNU SABİT TUTAN VE REKLAMLARI GİZLEYEN CSS ---
+# --- SOL MENÜ AÇMA BUTONUNU EKRANA ÇAKAN VE ASLA KAYBETMEYEN CSS ---
 sidebar_fix_css = """
     <style>
+    /* Reklam ve gereksiz Streamlit öğelerini gizle */
     #MainMenu {visibility: hidden !important;}
     footer {visibility: hidden !important;}
     .viewerBadge_container__1QSob,
@@ -27,11 +27,13 @@ sidebar_fix_css = """
         display: none !important;
     }
 
+    /* Header'ı yok etme, şeffaf yap ki sol menü açma oku yok olmasın! */
     header[data-testid="stHeader"] {
         background-color: transparent !important;
         z-index: 10000 !important;
     }
 
+    /* Sol menü açma okunu ekranda parlayan kırmızı şık bir butona çevir */
     [data-testid="stSidebarCollapseButton"], 
     button[data-testid="baseButton-headerNoPadding"],
     [data-testid="collapsedControl"] {
@@ -87,7 +89,7 @@ if not st.session_state["authenticated"]:
             """
             <div style='background-color: rgba(128, 128, 128, 0.08); padding: 30px; border-radius: 12px; text-align: center; border: 1px solid rgba(128, 128, 128, 0.2);'>
                 <h2 style='margin-bottom: 5px;'>🔒 Yetkili Girişi</h2>
-                <p style='color: gray; font-size: 14px;'>Parfüm Kalite Kontrol & Güvence Platformu</p>
+                <p style='color: gray; font-size: 14px;'>Tedarikçi Kalite & Dijital Numune Yönetim Paneli</p>
             </div>
             """,
             unsafe_allow_html=True
@@ -98,51 +100,90 @@ if not st.session_state["authenticated"]:
         st.caption("⚡ Developed by **miyaetp**")
     st.stop()
 
-# --- 3. NUMUNE VE KALİTE HAFIZASI ---
+# --- 3. FABRİKA KALİTE NUMUNE ŞABLON YAPISI (15 SÜTUN) ---
+KALITE_KOLONLARI = [
+    "HAMMADDE ADI",
+    "FİRMA İSMİ",
+    "LOT NO",
+    "TARİH",
+    "SERTİFİKA KONTROLÜ / ANALİZ YAPAN",
+    "AMBALAJ TEMİZLİĞİ",
+    "ETİKET UYGUNLUK",
+    "KABUL - RED",
+    "MENŞEİ (ÜRETİM YERİ)",
+    "RUBY ANALİZ DURUMU",
+    "COA",
+    "RUBY TDS",
+    "RUBY SDS",
+    "ORJİN (KAYNAK)",
+    "DOĞAL / REACH NO"
+]
+
 if "numuneler" not in st.session_state:
     st.session_state["numuneler"] = pd.DataFrame([
         {
-            "HAMMADDE ADI": "Oud Wood Esans", "FİRMA İSMİ": "Grasse Fragrance Ltd.", "LOT NO": "LOT-2026-088",
-            "TARİH": "2026-08-28", "SERTİFİKA KONTROLÜ / ANALİZ YAPAN": "Uygun / Ahmet K.", "AMBALAJ TEMİZLİĞİ": "Temiz - Uygun",
-            "ETİKET UYGUNLUK": "Uygun", "KABUL - RED": "KABUL", "MENŞEİ (ÜRETİM YERİ)": "Fransa",
-            "RUBY ANALİZ DURUMU": "Tamamlandı", "COA": "Var", "RUBY TDS": "Mevcut", "RUBY SDS": "Mevcut",
-            "ORJİN (KAYNAK)": "Sentetik/Doğal Karışım", "DOĞAL / REACH NO": "REACH-092831",
-            "SKT (SON KULLANMA)": "2027-08-28", "IFRA UYGUNLUK": "IFRA 51 - Onaylı (%12 Kat. 4)",
-            "MİKTAR (Birim)": 250, "BİRİM FİYAT (TL)": 1850
+            "HAMMADDE ADI": "Oud Wood Esans",
+            "FİRMA İSMİ": "Grasse Fragrance Ltd.",
+            "LOT NO": "LOT-2026-088",
+            "TARİH": "2026-08-28",
+            "SERTİFİKA KONTROLÜ / ANALİZ YAPAN": "Uygun / Ahmet K.",
+            "AMBALAJ TEMİZLİĞİ": "Temiz - Uygun",
+            "ETİKET UYGUNLUK": "Uygun",
+            "KABUL - RED": "KABUL",
+            "MENŞEİ (ÜRETİM YERİ)": "Fransa",
+            "RUBY ANALİZ DURUMU": "Tamamlandı",
+            "COA": "Var",
+            "RUBY TDS": "Mevcut",
+            "RUBY SDS": "Mevcut",
+            "ORJİN (KAYNAK)": "Sentetik/Doğal Karışım",
+            "DOĞAL / REACH NO": "REACH-092831"
         },
         {
-            "HAMMADDE ADI": "Kozmetik Denatüre Alkol %96", "FİRMA İSMİ": "Etanol Kimya Sanayi", "LOT NO": "LOT-2026-104",
-            "TARİH": "2026-08-30", "SERTİFİKA KONTROLÜ / ANALİZ YAPAN": "GC-MS Testi / Mehmet A.", "AMBALAJ TEMİZLİĞİ": "Varil Temiz",
-            "ETİKET UYGUNLUK": "Uygun", "KABUL - RED": "KABUL", "MENŞEİ (ÜRETİM YERİ)": "Türkiye",
-            "RUBY ANALİZ DURUMU": "Onaylandı", "COA": "Var", "RUBY TDS": "Mevcut", "RUBY SDS": "Mevcut",
-            "ORJİN (KAYNAK)": "Tarımsal Etanol", "DOĞAL / REACH NO": "REACH-883102",
-            "SKT (SON KULLANMA)": "2028-08-30", "IFRA UYGUNLUK": "Muaf (Çözücü)",
-            "MİKTAR (Birim)": 2000, "BİRİM FİYAT (TL)": 45
+            "HAMMADDE ADI": "Kozmetik Denatüre Alkol %96",
+            "FİRMA İSMİ": "Etanol Kimya Sanayi",
+            "LOT NO": "LOT-2026-104",
+            "TARİH": "2026-08-30",
+            "SERTİFİKA KONTROLÜ / ANALİZ YAPAN": "GC-MS Testi / Mehmet A.",
+            "AMBALAJ TEMİZLİĞİ": "Varil Temiz",
+            "ETİKET UYGUNLUK": "Uygun",
+            "KABUL - RED": "KABUL",
+            "MENŞEİ (ÜRETİM YERİ)": "Türkiye",
+            "RUBY ANALİZ DURUMU": "Onaylandı",
+            "COA": "Var",
+            "RUBY TDS": "Mevcut",
+            "RUBY SDS": "Mevcut",
+            "ORJİN (KAYNAK)": "Tarımsal Etanol",
+            "DOĞAL / REACH NO": "REACH-883102"
         },
         {
-            "HAMMADDE ADI": "100ml Lüks Cam Şişe", "FİRMA İSMİ": "Vetro Ambalaj A.Ş.", "LOT NO": "LOT-2026-310",
-            "TARİH": "2026-09-01", "SERTİFİKA KONTROLÜ / ANALİZ YAPAN": "Sızdırmazlık / Selin Y.", "AMBALAJ TEMİZLİĞİ": "Koli Deforme",
-            "ETİKET UYGUNLUK": "Eksik Lot Yazısı", "KABUL - RED": "RED", "MENŞEİ (ÜRETİM YERİ)": "İtalya",
-            "RUBY ANALİZ DURUMU": "Kaçak Tespit Edildi", "COA": "Yok", "RUBY TDS": "Eksik", "RUBY SDS": "Mevcut Değil",
-            "ORJİN (KAYNAK)": "Cam", "DOĞAL / REACH NO": "-",
-            "SKT (SON KULLANMA)": "2030-01-01", "IFRA UYGUNLUK": "Muaf (Ambalaj)",
-            "MİKTAR (Birim)": 5000, "BİRİM FİYAT (TL)": 28
+            "HAMMADDE ADI": "100ml Lüks Cam Şişe",
+            "FİRMA İSMİ": "Vetro Ambalaj A.Ş.",
+            "LOT NO": "LOT-2026-310",
+            "TARİH": "2026-09-01",
+            "SERTİFİKA KONTROLÜ / ANALİZ YAPAN": "Sızdırmazlık / Selin Y.",
+            "AMBALAJ TEMİZLİĞİ": "Koli Deforme",
+            "ETİKET UYGUNLUK": "Eksik Lot Yazısı",
+            "KABUL - RED": "RED",
+            "MENŞEİ (ÜRETİM YERİ)": "İtalya",
+            "RUBY ANALİZ DURUMU": "Kaçak Tespit Edildi",
+            "COA": "Yok",
+            "RUBY TDS": "Eksik",
+            "RUBY SDS": "Mevcut Değil",
+            "ORJİN (KAYNAK)": "Cam",
+            "DOĞAL / REACH NO": "-"
         }
     ])
 
-# Kusur Dağılımı Verisi (Pareto için)
-if "kusurlar" not in st.session_state:
-    st.session_state["kusurlar"] = pd.DataFrame({
-        "Kusur Türü": [
-            "Sızdırmazlık / Pompa Kaçağı",
-            "Organoleptik Koku Sapması",
-            "Eksik / Hatalı Etiketleme",
-            "Cam Şişede Çizik / Deformasyon",
-            "Eksik CoA Analiz Sertifikası",
-            "Dansite / Kırılma Sapması",
-            "Ambalaj Koli Hasarı"
-        ],
-        "Hata Sayısı": [42, 28, 18, 12, 9, 5, 2]
+# --- 4. TEDARİKÇİ ERP VERİLERİ ---
+@st.cache_data
+def get_sample_data():
+    return pd.DataFrame({
+        "Tedarikçi": ["Grasse Fragrance Ltd.", "Etanol Kimya Sanayi", "Vetro Ambalaj A.Ş.", "AeroSpray Valf", "Zamak Manyetik Kapak", "Prestige Kutu"],
+        "Yıllık Harcama (Bin TL)": [9500, 3800, 5200, 2100, 2800, 1650],
+        "Ret Oranı (%)": [0.8, 1.5, 3.8, 4.5, 1.2, 2.0],
+        "Belge Eksikliği (%)": [0.2, 0.5, 2.1, 3.2, 0.9, 1.1],
+        "Uygunsuzluk Sayısı": [1, 1, 5, 6, 2, 2],
+        "Ortalama Teslim Gecikmesi (Gün)": [1.0, 1.2, 3.5, 4.0, 1.8, 2.0]
     })
 
 # --- SOL MENÜ (SIDEBAR) ---
@@ -150,345 +191,468 @@ if st.sidebar.button("🚪 Güvenli Çıkış Yap"):
     st.session_state["authenticated"] = False
     st.rerun()
 
-st.sidebar.title("📌 Kalite Yönetim Menüsü")
+st.sidebar.title("📌 Modül / Sayfa Seçimi")
 secilen_sayfa = st.sidebar.radio(
     "Gitmek İstediğiniz Sayfayı Seçin:",
-    [
-        "🧪 Canlı Numune & Hammadde Takip",
-        "🔬 Parfüm Laboratuvar Doğrulama (IFRA/Fizikokimya)",
-        "⚙️ Proses Kalite: Sızdırmazlık, Krimp & Tork",
-        "📊 Kalite İstatistikleri: SPC & Pareto Analizi",
-        "🧫 Hijyen, Mikrobiyoloji & Stabilite Testi",
-        "🏷️ Depo Etiket Basıcı & Lot Pasaportu"
-    ]
+    ["📊 Tedarikçi Kalite & Karar Paneli", "🧪 Canlı Numune Takip Sistemi"]
 )
 st.sidebar.divider()
 
 # ==============================================================================
-# MODÜL 1: CANLI NUMUNE & HAMMADDE TAKİP
+# SAYFA 1: TEDARİKÇİ KALİTE & KARAR PANELİ
 # ==============================================================================
-if secilen_sayfa == "🧪 Canlı Numune & Hammadde Takip":
+if secilen_sayfa == "📊 Tedarikçi Kalite & Karar Paneli":
+    st.sidebar.header("⚙️ Değerlendirme Ağırlıkları (%)")
+    w_ret = st.sidebar.slider("Ret Oranı Ağırlığı", 0, 100, 35, step=5)
+    w_belge = st.sidebar.slider("Belge / Sertifika Eksikliği Ağırlığı", 0, 100, 25, step=5)
+    w_uyg = st.sidebar.slider("Uygunsuzluk Sayısı Ağırlığı", 0, 100, 25, step=5)
+    w_teslim = st.sidebar.slider("Teslimat Gecikmesi Ağırlığı", 0, 100, 15, step=5)
+
+    total_weight = w_ret + w_belge + w_uyg + w_teslim
+    norm_factor = 100 / total_weight if total_weight > 0 else 1
+
+    st.sidebar.divider()
+    st.sidebar.header("📁 Veri Kaynağı")
+    data_source = st.sidebar.radio("Kaynak Seçimi:", ["Örnek ERP Verisi Kullan", "Excel/CSV Yükle"])
+
+    if data_source == "Excel/CSV Yükle":
+        uploaded_file = st.sidebar.file_uploader("Tedarikçi Analiz Dosyası Seç (xlsx/csv)", type=["xlsx", "csv"])
+        if uploaded_file:
+            df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith(".csv") else pd.read_excel(uploaded_file)
+        else:
+            st.info("Lütfen bir tedarikçi veri dosyası yükleyin.")
+            st.stop()
+    else:
+        df = get_sample_data()
+
+    template_io = io.BytesIO()
+    with pd.ExcelWriter(template_io, engine='openpyxl') as writer:
+        get_sample_data().to_excel(writer, index=False, sheet_name='Sablon')
+
+    st.sidebar.download_button(
+        label="📄 Örnek Excel Şablonunu İndir",
+        data=template_io.getvalue(),
+        file_name="Tedarikci_Sablonu.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+    def calculate_scores(dataframe):
+        temp_df = dataframe.copy()
+        def normalize_inverse(series):
+            if series.max() == series.min():
+                return pd.Series(100, index=series.index)
+            return 100 * (1 - (series - series.min()) / (series.max() - series.min() + 1e-5))
+
+        ret_score = normalize_inverse(temp_df["Ret Oranı (%)"])
+        belge_score = normalize_inverse(temp_df["Belge Eksikliği (%)"])
+        uygunsuzluk_score = normalize_inverse(temp_df["Uygunsuzluk Sayısı"])
+        teslim_score = normalize_inverse(temp_df["Ortalama Teslim Gecikmesi (Gün)"])
+
+        temp_df["Performans Skoru"] = (
+            (ret_score * (w_ret * norm_factor / 100)) +
+            (belge_score * (w_belge * norm_factor / 100)) +
+            (uygunsuzluk_score * (w_uyg * norm_factor / 100)) +
+            (teslim_score * (w_teslim * norm_factor / 100))
+        ).round(1)
+        return temp_df
+
+    analyzed_df = calculate_scores(df)
+
+    def generate_ai_insight(row):
+        reasons = []
+        if row["Ret Oranı (%)"] >= 3.0: reasons.append("Yüksek ret oranı")
+        if row["Ortalama Teslim Gecikmesi (Gün)"] >= 3.0: reasons.append("Teslim gecikmesi")
+        if row["Uygunsuzluk Sayısı"] >= 4: reasons.append("Sık uygunsuzluk")
+        if row["Belge Eksikliği (%)"] >= 2.0: reasons.append("Belge eksikliği")
+
+        if row["Performans Skoru"] >= 85:
+            return "🟢 Onaylı Tedarikçi: Kalite kararlılığı yüksek, öncelikli tercih edilmeli."
+        elif row["Performans Skoru"] >= 65:
+            detail = ", ".join(reasons) if reasons else "Parametrelerde dalgalanma"
+            return f"🟡 Sıkı Takip: {detail} nedeniyle performans takibi yapılmalı."
+        else:
+            detail = ", ".join(reasons) if reasons else "Kritik limitler aşıldı"
+            return f"🔴 Riskli Tedarikçi: {detail}. Acil 8D DÖF talep edilmeli veya alternatif firma değerlendirilmeli."
+
+    analyzed_df["YZ Karar Destek"] = analyzed_df.apply(generate_ai_insight, axis=1)
+
+    st.title("📊 Tedarikçi Kalite & Performans Karar Sistemi")
+    st.caption("Veri Odaklı Kalite Kontrol, Satın Alma Stratejisi ve Aksiyon Yönetimi")
+
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Genel Kalite Skoru", f"{analyzed_df['Performans Skoru'].mean():.1f} / 100")
+    col2.metric("Ortalama Ret Oranı", f"%{analyzed_df['Ret Oranı (%)'].mean():.1f}")
+    col3.metric("Ort. Belge Eksikliği", f"%{analyzed_df['Belge Eksikliği (%)'].mean():.1f}")
+    col4.metric("Ort. Teslim Gecikmesi", f"{analyzed_df['Ortalama Teslim Gecikmesi (Gün)'].mean():.1f} Gün")
+
+    st.divider()
+
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        "📊 Genel Kalite Sıralaması",
+        "🎯 Harcama & Risk Matrisi",
+        "🔮 What-If İyileştirme Simülatörü",
+        "⚔️ İki Tedarikçi Kıyaslama",
+        "📈 6 Aylık Trend & Karne",
+        "📄 Resmi DÖF & İhtar Mektubu"
+    ])
+
+    with tab1:
+        col_chart, col_pie = st.columns([3, 2])
+        with col_chart:
+            sorted_df = analyzed_df.sort_values(by="Performans Skoru", ascending=True)
+            fig_bar = px.bar(
+                sorted_df, x="Performans Skoru", y="Tedarikçi", orientation="h",
+                text="Performans Skoru", color="Performans Skoru", color_continuous_scale="Tealgrn", range_x=[0, 100]
+            )
+            fig_bar.update_layout(height=350, margin=dict(l=0, r=20, t=20, b=20))
+            st.plotly_chart(fig_bar, use_container_width=True)
+        with col_pie:
+            fig_pie = px.pie(
+                names=["Ret Oranı", "Belge/Sertifika", "Uygunsuzluk", "Teslim Süresi"],
+                values=[w_ret, w_belge, w_uyg, w_teslim], hole=0.4
+            )
+            fig_pie.update_layout(height=350, margin=dict(l=20, r=20, t=20, b=20))
+            st.plotly_chart(fig_pie, use_container_width=True)
+
+    with tab2:
+        st.subheader("🎯 Harcama ve Kalite Risk Matrisi")
+        if "Yıllık Harcama (Bin TL)" in analyzed_df.columns:
+            fig_scatter = px.scatter(
+                analyzed_df,
+                x="Performans Skoru",
+                y="Yıllık Harcama (Bin TL)",
+                text="Tedarikçi",
+                size="Yıllık Harcama (Bin TL)",
+                color="Performans Skoru",
+                color_continuous_scale="RdYlGn",
+                range_x=[0, 105]
+            )
+            fig_scatter.add_vline(x=70, line_dash="dash", line_color="gray", annotation_text="Kritik Kalite Eşiği (70 Puan)")
+            fig_scatter.update_traces(textposition='top center')
+            fig_scatter.update_layout(height=400, margin=dict(l=20, r=20, t=30, b=20))
+            st.plotly_chart(fig_scatter, use_container_width=True)
+
+    with tab3:
+        st.subheader("🔮 'What-If' Kalite İyileştirme Simülatörü")
+        sim_supplier = st.selectbox("Simüle Edilecek Tedarikçi:", analyzed_df["Tedarikçi"].unique())
+        sim_row = analyzed_df[analyzed_df["Tedarikçi"] == sim_supplier].iloc[0]
+        
+        col_w1, col_w2, col_w3, col_w4 = st.columns(4)
+        new_ret = col_w1.slider("Hedef Ret Oranı (%)", 0.0, 8.0, float(sim_row["Ret Oranı (%)"]), 0.1)
+        new_belge = col_w2.slider("Hedef Belge Eksikliği (%)", 0.0, 8.0, float(sim_row["Belge Eksikliği (%)"]), 0.1)
+        new_uyg = col_w3.slider("Hedef Uygunsuzluk Sayısı", 0, 10, int(sim_row["Uygunsuzluk Sayısı"]), 1)
+        new_teslim = col_w4.slider("Hedef Gecikme (Gün)", 0.0, 8.0, float(sim_row["Ortalama Teslim Gecikmesi (Gün)"]), 0.1)
+        
+        sim_df = analyzed_df.copy()
+        sim_df.loc[sim_df["Tedarikçi"] == sim_supplier, "Ret Oranı (%)"] = new_ret
+        sim_df.loc[sim_df["Tedarikçi"] == sim_supplier, "Belge Eksikliği (%)"] = new_belge
+        sim_df.loc[sim_df["Tedarikçi"] == sim_supplier, "Uygunsuzluk Sayısı"] = new_uyg
+        sim_df.loc[sim_df["Tedarikçi"] == sim_supplier, "Ortalama Teslim Gecikmesi (Gün)"] = new_teslim
+        
+        recalc_df = calculate_scores(sim_df)
+        new_score = recalc_df[recalc_df["Tedarikçi"] == sim_supplier]["Performans Skoru"].iloc[0]
+        old_score = sim_row["Performans Skoru"]
+        delta_score = round(new_score - old_score, 1)
+        
+        col_res_a, col_res_b = st.columns(2)
+        col_res_a.metric("Mevcut Kalite Skoru", f"{old_score} / 100")
+        col_res_b.metric("Simüle Edilen Yeni Skor", f"{new_score} / 100", delta=f"{delta_score} Puan Değişimi")
+
+    with tab4:
+        st.subheader("⚔️ İki Tedarikçi Birebir Kıyaslaması (Radar Analizi)")
+        supplier_list = list(analyzed_df["Tedarikçi"].unique())
+        col_s1, col_s2 = st.columns(2)
+        with col_s1: s1 = st.selectbox("1. Tedarikçi:", supplier_list, index=0)
+        with col_s2: s2 = st.selectbox("2. Tedarikçi:", supplier_list, index=min(1, len(supplier_list)-1))
+
+        if s1 and s2:
+            row1 = analyzed_df[analyzed_df["Tedarikçi"] == s1].iloc[0]
+            row2 = analyzed_df[analyzed_df["Tedarikçi"] == s2].iloc[0]
+
+            categories = ['Düşük Ret Başarısı', 'Belge/Sertifika Tamlığı', 'Kalite Uygunluğu', 'Termin Sadakati']
+            val1 = [max(0, 100 - row1['Ret Oranı (%)'] * 12), max(0, 100 - row1['Belge Eksikliği (%)'] * 18), max(0, 100 - row1['Uygunsuzluk Sayısı'] * 12), max(0, 100 - row1['Ortalama Teslim Gecikmesi (Gün)'] * 15)]
+            val2 = [max(0, 100 - row2['Ret Oranı (%)'] * 12), max(0, 100 - row2['Belge Eksikliği (%)'] * 18), max(0, 100 - row2['Uygunsuzluk Sayısı'] * 12), max(0, 100 - row2['Ortalama Teslim Gecikmesi (Gün)'] * 15)]
+
+            fig_compare = go.Figure()
+            fig_compare.add_trace(go.Scatterpolar(r=val1, theta=categories, fill='toself', name=s1, line=dict(color='#00CC96')))
+            fig_compare.add_trace(go.Scatterpolar(r=val2, theta=categories, fill='toself', name=s2, line=dict(color='#EF553B')))
+            fig_compare.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 100])), height=360, margin=dict(l=40, r=40, t=30, b=30))
+            st.plotly_chart(fig_compare, use_container_width=True)
+
+    with tab5:
+        st.subheader("📈 Tedarikçi 6 Aylık Kalite Trendi")
+        trend_supplier = st.selectbox("Trend İncelemesi İçin Tedarikçi:", supplier_list)
+        months = ["Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos"]
+        base_score = analyzed_df[analyzed_df["Tedarikçi"] == trend_supplier]["Performans Skoru"].iloc[0]
+        np.random.seed(abs(hash(trend_supplier)) % 10000)
+        fluctuation = np.random.uniform(-6, 6, size=5)
+        monthly_scores = [np.clip(base_score + f, 30, 100) for f in fluctuation] + [base_score]
+        trend_df = pd.DataFrame({"Ay": months, "Performans Skoru": monthly_scores})
+        fig_trend = px.line(trend_df, x="Ay", y="Performans Skoru", markers=True, range_y=[0, 105], title=f"{trend_supplier} - 6 Aylık Kalite Gelişimi")
+        fig_trend.update_layout(height=350, margin=dict(l=20, r=20, t=40, b=20))
+        st.plotly_chart(fig_trend, use_container_width=True)
+
+    with tab6:
+        st.subheader("📄 Resmi Kalite DÖF / İhtar Mektubu Üretici")
+        selected_for_dof = st.selectbox("İhtar Gönderilecek Firma:", supplier_list, key="dof_select")
+        dof_row = analyzed_df[analyzed_df["Tedarikçi"] == selected_for_dof].iloc[0]
+        today_str = datetime.date.today().strftime("%d.%m.%Y")
+        
+        letter_text = f"""SAYIN {selected_for_dof.upper()} KALİTE GÜVENCE MÜDÜRLÜĞÜNE,\nTarih: {today_str}\nKonu: Tedarikçi Kalite Uygunsuzluğu ve 8D DÖF Talebi\n\nGenel kalite skoru 100 üzerinden {dof_row['Performans Skoru']} olarak ölçülmüştür.\n- Ret Oranı: %{dof_row['Ret Oranı (%)']}\n- Belge/Sertifika Eksikliği: %{dof_row['Belge Eksikliği (%)']}\n- Uygunsuzluk Sayısı: {int(dof_row['Uygunsuzluk Sayısı'])} Adet\n- Gecikme: {dof_row['Ortalama Teslim Gecikmesi (Gün)']} Gün\n\n5 iş günü içinde DÖF planı talep edilmektedir.\n\nKalite Güvence Direktörlüğü | miyaetp Quality Intelligence"""
+        st.text_area("Oluşturulan Mektup Metni:", letter_text, height=220)
+        st.download_button("📥 DÖF Mektubunu İndir (.txt)", letter_text, file_name=f"DOF_{selected_for_dof}.txt", mime="text/plain")
+
+    st.divider()
+    st.subheader("📋 Detaylı Tedarikçi Kalite Değerlendirme Tablosu")
+    display_df = analyzed_df.sort_values(by="Performans Skoru", ascending=False)
+    st.dataframe(display_df, use_container_width=True)
+
+    excel_out = io.BytesIO()
+    with pd.ExcelWriter(excel_out, engine='openpyxl') as writer:
+        display_df.to_excel(writer, index=False, sheet_name='Kalite_Analizi')
+    st.download_button("📥 Kalite Raporunu Excel Olarak İndir", excel_out.getvalue(), "Tedarikci_Kalite_Raporu.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+# ==============================================================================
+# SAYFA 2: CANLI NUMUNE TAKİP SİSTEMİ (15 SÜTUNLU FABRİKA FORMATI)
+# ==============================================================================
+else:
     st.title("🧪 Canlı Numune & Hammadde Kalite Takip Sistemi")
-    st.caption("Giriş Kalite Kontrol Kayıtları, Kabul/Red Kararları ve Raf Ömrü (SKT) Uyarıları")
+    st.caption("Fabrika Giriş Kalite Kontrol Şablonuna Uygun Numune Kabul, Analiz ve Kabul/Red Yönetimi")
 
-    s_df = st.session_state["numuneler"].copy()
+    # --- ESNEK VE TAM EŞLEŞTİRMELİ EXCEL YÜKLEME ALANI ---
+    with st.expander("📥 Kalite Kontrol Excel Listesini İçe Aktar", expanded=False):
+        col_up1, col_up2 = st.columns([2, 1])
+        with col_up1:
+            uploaded_samples = st.file_uploader("Numune Excel Dosyası Seç (.xlsx veya .csv)", type=["xlsx", "csv"], key="numune_uploader")
+            if uploaded_samples:
+                try:
+                    raw_df = pd.read_csv(uploaded_samples) if uploaded_samples.name.endswith(".csv") else pd.read_excel(uploaded_samples)
+                    raw_df = raw_df.dropna(how='all').reset_index(drop=True)
+                    
+                    if len(raw_df) == 0:
+                        st.warning("Yüklenen dosya boş!")
+                    else:
+                        processed_df = pd.DataFrame()
+                        bugun = datetime.date.today().strftime("%Y-%m-%d")
 
-    # SKT Kontrolü
-    today = datetime.date.today()
-    alerts = []
-    for idx, r in s_df.iterrows():
-        try:
-            skt = datetime.datetime.strptime(str(r.get("SKT (SON KULLANMA)", "")).strip(), "%Y-%m-%d").date()
-            diff = (skt - today).days
-            if diff < 0:
-                alerts.append(f"🔴 **{r['HAMMADDE ADI']} ({r['LOT NO']})** SKT'si {abs(diff)} gün önce DOLDU!")
-            elif diff <= 60:
-                alerts.append(f"🟡 **{r['HAMMADDE ADI']} ({r['LOT NO']})** SKT yaklaşıyor: {diff} gün kaldı.")
-        except:
-            pass
+                        def find_column(patterns):
+                            for col in raw_df.columns:
+                                col_clean = str(col).upper().replace("İ", "I").replace("I", "I").strip()
+                                for p in patterns:
+                                    p_clean = p.upper().replace("İ", "I").replace("I", "I").strip()
+                                    if p_clean in col_clean:
+                                        return col
+                            return None
 
-    if alerts:
-        with st.expander("⚠️ DİKKAT: Raf Ömrü & Re-Test Alarmları", expanded=True):
-            for a in alerts:
-                st.markdown(a)
+                        # 1. HAMMADDE ADI
+                        col = find_column(["HAMMADDE", "URUN", "MALZEME", "NUMUNE ADI", "NAME"])
+                        processed_df["HAMMADDE ADI"] = raw_df[col].fillna("Genel Hammadde").astype(str) if col else "Genel Hammadde"
 
+                        # 2. FİRMA İSMİ
+                        col = find_column(["FIRMA", "TEDARIK", "URETICI", "SUPPLIER", "VENDOR"])
+                        processed_df["FİRMA İSMİ"] = raw_df[col].fillna("Bilinmeyen Firma").astype(str) if col else "Bilinmeyen Firma"
+
+                        # 3. LOT NO
+                        col = find_column(["LOT", "SARJ", "BATCH", "PARTI"])
+                        processed_df["LOT NO"] = raw_df[col].fillna("-").astype(str) if col else "-"
+
+                        # 4. TARİH
+                        col = find_column(["TARIH", "DATE", "GIRIS", "KABUL TARIHI"])
+                        processed_df["TARİH"] = raw_df[col].fillna(bugun).astype(str) if col else bugun
+
+                        # 5. SERTİFİKA KONTROLÜ / ANALİZ YAPAN
+                        col = find_column(["SERTIFIKA KONTROLU", "ANALIZ YAPAN", "SERTIFIKA", "ANALIZ"])
+                        processed_df["SERTİFİKA KONTROLÜ / ANALİZ YAPAN"] = raw_df[col].fillna("-").astype(str) if col else "-"
+
+                        # 6. AMBALAJ TEMİZLİĞİ / ORTAK ANALİZ
+                        col = find_column(["AMBALAJ TEMIZLIGI", "AMBALAJ", "ORTAK ANALIZ"])
+                        processed_df["AMBALAJ TEMİZLİĞİ"] = raw_df[col].fillna("-").astype(str) if col else "-"
+
+                        # 7. ETİKET UYGUNLUK
+                        col = find_column(["ETIKET", "LABEL", "ETIKET UYGUNLUK"])
+                        processed_df["ETİKET UYGUNLUK"] = raw_df[col].fillna("-").astype(str) if col else "-"
+
+                        # 8. KABUL - RED (OTOMATİK NORMALİZASYON)
+                        col = find_column(["KABUL - RED", "KABUL", "RED", "DURUM", "SONUC", "KARAR", "STATUS"])
+                        def parse_kabul_red(val):
+                            v = str(val).upper().replace("İ", "I").strip()
+                            if any(k in v for k in ["KABUL", "ONAY", "UYGUN", "PASS", "OK"]):
+                                return "KABUL"
+                            elif any(k in v for k in ["RED", "RET", "UYGUNSUZ", "FAIL", "NOK"]):
+                                return "RED"
+                            else:
+                                return "BEKLİYOR"
+
+                        processed_df["KABUL - RED"] = raw_df[col].apply(parse_kabul_red) if col else "BEKLİYOR"
+
+                        # 9. MENŞEİ (ÜRETİM YERİ)
+                        col = find_column(["MENSEI", "URETIM YERI", "ULKE", "ORIGIN"])
+                        processed_df["MENŞEİ (ÜRETİM YERİ)"] = raw_df[col].fillna("-").astype(str) if col else "-"
+
+                        # 10. RUBY ANALİZ DURUMU
+                        col = find_column(["RUBY ANALIZ", "LAB DURUMU", "ANALIZ DURUMU"])
+                        processed_df["RUBY ANALİZ DURUMU"] = raw_df[col].fillna("-").astype(str) if col else "-"
+
+                        # 11. COA
+                        col = find_column(["COA", "ANALIZ SERTIFIKASI"])
+                        processed_df["COA"] = raw_df[col].fillna("-").astype(str) if col else "-"
+
+                        # 12. RUBY TDS
+                        col = find_column(["TDS", "RUBY TDS", "TEKNIK DOKUMAN"])
+                        processed_df["RUBY TDS"] = raw_df[col].fillna("-").astype(str) if col else "-"
+
+                        # 13. RUBY SDS
+                        col = find_column(["SDS", "MSDS", "RUBY SDS", "GUVENLIK"])
+                        processed_df["RUBY SDS"] = raw_df[col].fillna("-").astype(str) if col else "-"
+
+                        # 14. ORJİN (KAYNAK)
+                        col = find_column(["ORJIN", "KAYNAK", "SOURCE"])
+                        processed_df["ORJİN (KAYNAK)"] = raw_df[col].fillna("-").astype(str) if col else "-"
+
+                        # 15. DOĞAL / REACH NO
+                        col = find_column(["REACH", "DOGAL", "REACH NO"])
+                        processed_df["DOĞAL / REACH NO"] = raw_df[col].fillna("-").astype(str) if col else "-"
+
+                        final_df = processed_df[KALITE_KOLONLARI]
+
+                        col_btn1, col_btn2 = st.columns(2)
+                        with col_btn1:
+                            if st.button("🔄 Tabloyu Bu Excel İle Sıfırla & Yükle"):
+                                st.session_state["numuneler"] = final_df
+                                st.success(f"Başarılı! {len(final_df)} adet kayıt 15 sütunluk şablona tam oturtuldu.")
+                                st.rerun()
+                        with col_btn2:
+                            if st.button("➕ Mevcut Listenin Altına Ekle"):
+                                st.session_state["numuneler"] = pd.concat([st.session_state["numuneler"], final_df], ignore_index=True)
+                                st.success(f"{len(final_df)} adet yeni satır listenin altına eklendi!")
+                                st.rerun()
+
+                except Exception as e:
+                    st.error(f"Dosya işlenirken hata oluştu: {e}")
+
+        with col_up2:
+            st.markdown("**15 Sütunluk Orijinal Excel Şablonu:**")
+            st.caption("Resimdeki başlıkların tam birebir şablonudur.")
+            sample_template_io = io.BytesIO()
+            with pd.ExcelWriter(sample_template_io, engine='openpyxl') as writer:
+                st.session_state["numuneler"].to_excel(writer, index=False, sheet_name='Kalite_Takip_Sablonu')
+            st.download_button(
+                label="📄 Kalite Kontrol Şablonunu İndir",
+                data=sample_template_io.getvalue(),
+                file_name="Kalite_Kontrol_Numune_Sablonu.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
+    s_df = st.session_state["numuneler"]
+
+    # Canlı Durum Metrik Kartları
     col_m1, col_m2, col_m3, col_m4 = st.columns(4)
     col_m1.metric("Toplam Kayıt", f"{len(s_df)} Adet")
-    col_m2.metric("✅ KABUL", f"{len(s_df[s_df['KABUL - RED'] == 'KABUL'])} Adet")
-    col_m3.metric("🔴 RED", f"{len(s_df[s_df['KABUL - RED'] == 'RED'])} Adet")
+    col_m2.metric("✅ KABUL Edilen", f"{len(s_df[s_df['KABUL - RED'] == 'KABUL'])} Adet")
+    col_m3.metric("🔴 RED Edilen", f"{len(s_df[s_df['KABUL - RED'] == 'RED'])} Adet")
     col_m4.metric("⏳ BEKLİYOR", f"{len(s_df[s_df['KABUL - RED'] == 'BEKLİYOR'])} Adet")
 
     st.divider()
 
-    karar_f = st.radio("Kabul / Red Filtresi:", ["Tümü", "KABUL", "RED", "BEKLİYOR"], horizontal=True)
-    gosterim_df = s_df if karar_f == "Tümü" else s_df[s_df["KABUL - RED"] == karar_f]
-    st.dataframe(gosterim_df, use_container_width=True)
+    # --- YENİ KAYIT & HIZLI KARAR GÜNCELLEME ---
+    col_left, col_right = st.columns([1.1, 1.2])
 
-    buf = io.BytesIO()
-    with pd.ExcelWriter(buf, engine='openpyxl') as writer:
-        s_df.to_excel(writer, index=False, sheet_name='Kalite_Kontrol')
-    st.download_button("📥 Tabloyu Excel Olarak İndir", buf.getvalue(), "Kalite_Kontrol_Listesi.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    with col_left:
+        st.markdown("### ➕ Manuel Numune Girişi")
+        with st.form("manuel_numune_form", clear_on_submit=True):
+            f_hammadde = st.text_input("Hammadde Adı:", placeholder="Örn: Bergamot Esansı")
+            f_firma = st.text_input("Firma İsmi:", placeholder="Örn: Grasse Fragrance Ltd.")
+            f_lot = st.text_input("Lot No:", placeholder="Örn: LOT-9941")
+            f_tarih = st.date_input("Kabul Tarihi:", datetime.date.today())
+            f_karar = st.selectbox("Kabul / Red Durumu:", ["BEKLİYOR", "KABUL", "RED"])
+            f_analiz = st.text_input("Analiz Yapan / Not:", placeholder="Örn: Ahmet K. / Koku testi yapıldı")
+            
+            ekle_btn = st.form_submit_button("✅ Sisteme Kaydet")
+            if ekle_btn and f_hammadde and f_firma:
+                yeni_satir = pd.DataFrame([{
+                    "HAMMADDE ADI": f_hammadde,
+                    "FİRMA İSMİ": f_firma,
+                    "LOT NO": f_lot if f_lot else "-",
+                    "TARİH": f_tarih.strftime("%Y-%m-%d"),
+                    "SERTİFİKA KONTROLÜ / ANALİZ YAPAN": f_analiz if f_analiz else "-",
+                    "AMBALAJ TEMİZLİĞİ": "Uygun",
+                    "ETİKET UYGUNLUK": "Uygun",
+                    "KABUL - RED": f_karar,
+                    "MENŞEİ (ÜRETİM YERİ)": "-",
+                    "RUBY ANALİZ DURUMU": "-",
+                    "COA": "-",
+                    "RUBY TDS": "-",
+                    "RUBY SDS": "-",
+                    "ORJİN (KAYNAK)": "-",
+                    "DOĞAL / REACH NO": "-"
+                }])
+                st.session_state["numuneler"] = pd.concat([yeni_satir, st.session_state["numuneler"]], ignore_index=True)
+                st.success(f"{f_hammadde} ({f_karar}) olarak sisteme kaydedildi!")
+                st.rerun()
 
-# ==============================================================================
-# MODÜL 2: PARFÜM LABORATUVAR DOĞRULAMA (IFRA & FİZİKOKİMYA)
-# ==============================================================================
-elif secilen_sayfa == "🔬 Parfüm Laboratuvar Doğrulama (IFRA/Fizikokimya)":
-    st.title("🔬 Parfüm & Kozmetik Laboratuvar Doğrulama")
-    st.caption("Fizikokimyasal Cihaz Ölçümleri, Organoleptik Testler ve IFRA Standart Kontrolü")
+    with col_right:
+        st.markdown("### ⚡ Karar & Durum Güncelle")
+        if len(st.session_state["numuneler"]) > 0:
+            hammadde_listesi = [f"{i}: {row['HAMMADDE ADI']} ({row['FİRMA İSMİ']}) - {row['LOT NO']}" for i, row in st.session_state["numuneler"].iterrows()]
+            secilen_idx_str = st.selectbox("İşlem Yapılacak Satırı Seçin:", hammadde_listesi)
+            secilen_index = int(secilen_idx_str.split(":")[0])
+            secili_satir = st.session_state["numuneler"].loc[secilen_index]
 
-    with st.form("lab_dogrulama_form"):
-        col1, col2 = st.columns(2)
-        with col1:
-            h_tur = st.selectbox("Hammadde Türü:", ["Esans / Koku Yağı", "Kozmetik Alkol (%96)"])
-            h_ad = st.text_input("Hammadde & Lot No:", value="Bergamot & Amber Esansı - LOT-2026-112")
-            h_koku = st.selectbox("Organoleptik (Koku Testi):", [
-                "Standart Şahit Numune ile Birebir Uyumlu",
-                "Hafif Nüans Farkı (Tolerans İçi)",
-                "Belirgin Yabancı Koku / Okside (Ret)"
-            ])
-            h_renk = st.selectbox("Görünüm & Tortu:", ["Berrak / Tortusuz", "Bulanık / Çökeltili (Ret)"])
-        with col2:
-            refrak = st.number_input("Kırılma İndisi (Refraktometre 20°C):", min_value=1.300, max_value=1.600, value=1.492, step=0.001, format="%.3f")
-            dan = st.number_input("Dansite / Bağıl Yoğunluk (d20/20):", min_value=0.700, max_value=1.300, value=0.985, step=0.001, format="%.3f")
-            alkol_deg = st.number_input("Alkol Derecesi (% Vol 20°C):", min_value=80.0, max_value=100.0, value=96.4, step=0.1) if h_tur == "Kozmetik Alkol (%96)" else 0.0
-            ifra_ok = st.checkbox("IFRA 51. Amendment Kategori 4 Uygunluk Sertifikası Var", value=True)
-            coa_ok = st.checkbox("İmzalı Üretici Analiz Sertifikası (CoA) Mevcut", value=True)
+            st.info(f"**Hammadde:** {secili_satir['HAMMADDE ADI']} | **Firma:** {secili_satir['FİRMA İSMİ']} | **Tarih:** {secili_satir['TARİH']}")
+            
+            col_k1, col_k2 = st.columns(2)
+            with col_k1:
+                yeni_karar = st.selectbox(
+                    "KABUL - RED Durumu:",
+                    ["BEKLİYOR", "KABUL", "RED"],
+                    index=["BEKLİYOR", "KABUL", "RED"].index(secili_satir["KABUL - RED"]) if secili_satir["KABUL - RED"] in ["BEKLİYOR", "KABUL", "RED"] else 0
+                )
+            with col_k2:
+                yeni_analiz_durum = st.text_input("Ruby Analiz Durumu:", value=str(secili_satir["RUBY ANALİZ DURUMU"]))
 
-        onay_btn = st.form_submit_button("⚡ Kalite Uygunluğunu Değerlendir")
+            guncel_analiz_yapan = st.text_input("Analiz Yapan / Açıklama:", value=str(secili_satir["SERTİFİKA KONTROLÜ / ANALİZ YAPAN"]))
 
-    if onay_btn:
-        hatalar = []
-        if h_tur == "Esans / Koku Yağı":
-            if not (1.450 <= refrak <= 1.520):
-                hatalar.append(f"Kırılma indisi ({refrak}) tolerans dışı! (1.450 - 1.520 olmalı)")
-            if not (0.850 <= dan <= 1.080):
-                hatalar.append(f"Dansite ({dan}) tolerans dışı! (0.850 - 1.080 olmalı)")
-        elif h_tur == "Kozmetik Alkol (%96)":
-            if alkol_deg < 96.0:
-                hatalar.append(f"Alkol derecesi (%{alkol_deg}) kozmetik limitin altındadır! (Min %96.0)")
+            if st.button("💾 Değişiklikleri Kaydet", use_container_width=True):
+                st.session_state["numuneler"].at[secilen_index, "KABUL - RED"] = yeni_karar
+                st.session_state["numuneler"].at[secilen_index, "RUBY ANALİZ DURUMU"] = yeni_analiz_durum
+                st.session_state["numuneler"].at[secilen_index, "SERTİFİKA KONTROLÜ / ANALİZ YAPAN"] = guncel_analiz_yapan
+                st.success("Kayıt başarıyla güncellendi!")
+                st.rerun()
 
-        if "Ret" in h_koku:
-            hatalar.append("Organoleptik: Koku profilinde yabancı solvent veya oksidasyon sapması!")
-        if "Bulanık" in h_renk:
-            hatalar.append("Fiziksel: Üründe çökelti veya tortu saptandı!")
-        if not ifra_ok:
-            hatalar.append("Mevzuat: IFRA 51 sertifikası eksik!")
-        if not coa_ok:
-            hatalar.append("Belge: Analiz Sertifikası (CoA) bulunamadı!")
+    st.divider()
 
-        if not hatalar:
-            st.success("🟢 **SONUÇ: TAM KALİTE ONAYI (KABUL)** — Fizikokimyasal ve mevzuat kriterleri uygundur.")
-        else:
-            st.error("🔴 **SONUÇ: UYGUNSUZLUK TESPİT EDİLDİ (RED)**")
-            for h in hatalar:
-                st.write(f"- ❌ {h}")
+    # --- CANLI TABLO & FİLTRELEME ALANI ---
+    st.subheader("📋 Canlı Numune & Hammadde Takip Tablosu")
+    
+    col_f1, col_f2 = st.columns([1.5, 2])
+    with col_f1:
+        karar_filtresi = st.radio("Kabul/Red Filtresi:", ["Tümü", "KABUL", "RED", "BEKLİYOR"], horizontal=True)
+    with col_f2:
+        firma_ara = st.text_input("🔍 Firma veya Hammadde Ara:", placeholder="Örn: Grasse veya Etanol...")
 
-# ==============================================================================
-# MODÜL 3: PROSES KALİTE: SIZDIRMAZLIK, KRİMP & TORK TESTİ
-# ==============================================================================
-elif secilen_sayfa == "⚙️ Proses Kalite: Sızdırmazlık, Krimp & Tork":
-    st.title("⚙️ Proses Kalite: Şişe Sızdırmazlık, Krimp & Tork Kontrolü")
-    st.caption("Dolum Hattı İçi Vakum Desikatör Kaçak Testi, Krimp Boğaz Kumpas Ölçümü ve Kapak Tork Değerleri")
+    tablo_df = st.session_state["numuneler"].copy()
+    if karar_filtresi != "Tümü":
+        tablo_df = tablo_df[tablo_df["KABUL - RED"] == karar_filtresi]
+    
+    if firma_ara:
+        tablo_df = tablo_df[
+            tablo_df["HAMMADDE ADI"].str.contains(firma_ara, case=False, na=False) |
+            tablo_df["FİRMA İSMİ"].str.contains(firma_ara, case=False, na=False) |
+            tablo_df["LOT NO"].str.contains(firma_ara, case=False, na=False)
+        ]
 
-    tab_vakum, tab_krimp, tab_tork = st.tabs([
-        "💨 Vakum Desikatör Sızdırmazlık Testi",
-        "📐 Krimp Yüksekliği & Çap Kumpas Kontrolü",
-        "🔩 Kapak Açma / Kapama Tork Ölçümü"
-    ])
+    st.dataframe(tablo_df, use_container_width=True)
 
-    with tab_vakum:
-        st.subheader("💨 Vakum Kaçak Testi (Vakum Desikatörü)")
-        st.caption("Numuneler su dolu desikatör tankına daldırılır ve negatif basınç altında hava kabarcığı izlenir.")
+    numune_out_io = io.BytesIO()
+    with pd.ExcelWriter(numune_out_io, engine='openpyxl') as writer:
+        st.session_state["numuneler"].to_excel(writer, index=False, sheet_name='Kalite_Kontrol_Listesi')
 
-        col_v1, col_v2 = st.columns(2)
-        with col_v1:
-            vakum_basinc = st.slider("Uygulanan Negatif Basınç (Bar):", -1.0, 0.0, -0.6, 0.05)
-            test_suresi = st.slider("Vakumda Tutma Süresi (Dakika):", 1, 10, 3)
-            test_adet = st.number_input("Test Edilen Numune Adedi:", min_value=1, value=20)
-            sizdiran_adet = st.number_input("Hava Kabarcığı / Kaçak Çıkaran Numune Adedi:", min_value=0, value=0)
-
-        with col_v2:
-            st.markdown("#### Test Değerlendirmesi:")
-            if sizdiran_adet == 0:
-                st.success(f"🟢 **SIZDIRMAZLIK ONAYLANDI:** {test_adet} adet numunenin hiçbirinde {vakum_basinc} bar basınç altında mikro kaçak tespit edilmedi.")
-            else:
-                fire_orani = (sizdiran_adet / test_adet) * 100
-                st.error(f"🔴 **SIZDIRMAZLIK RET:** {sizdiran_adet} adet şişede kaçak tespit edildi! (Hata Oranı: %{fire_orani:.1f})")
-                st.warning("Öneri: Valf krimp çenesi basıncını ve şişe boğaz conta oturmasını kontrol edin.")
-
-    with tab_krimp:
-        st.subheader("📐 FEA 15 / FEA 20 Krimp Ölçüm Doğrulama")
-        st.caption("Sprey pompanın şişe boğazına krimp edilme çapı ve yüksekliği kumpasla doğrulanır.")
-
-        col_k1, col_k2 = st.columns(2)
-        with col_k1:
-            valf_tipi = st.selectbox("Valf Tipi:", ["FEA 15 (Standart Parfüm)", "FEA 20 (Geniş Boğaz)"])
-            olculen_cap = st.number_input("Ölçülen Krimp Dış Çapı (mm):", min_value=14.0, max_value=22.0, value=15.35, step=0.01, format="%.2f")
-            olculen_yukseklik = st.number_input("Ölçülen Krimp Yüksekliği (mm):", min_value=6.0, max_value=10.0, value=7.20, step=0.01, format="%.2f")
-
-        with col_k2:
-            st.markdown("#### Tolerans Doğrulaması:")
-            # FEA 15 Toleransları: Çap 15.25 - 15.45 mm, Yükseklik 7.00 - 7.30 mm
-            cap_ok = (15.25 <= olculen_cap <= 15.45) if "15" in valf_tipi else (19.80 <= olculen_cap <= 20.10)
-            yuk_ok = (7.00 <= olculen_yukseklik <= 7.35)
-
-            if cap_ok and yuk_ok:
-                st.success("🟢 **ÖLÇÜMLER UYGUN:** Krimp çapı ve yüksekliği teknik çizim toleransı içindedir.")
-            else:
-                if not cap_ok:
-                    st.error(f"❌ Krimp çapı ({olculen_cap} mm) tolerans dışı!")
-                if not yuk_ok:
-                    st.error(f"❌ Krimp yüksekliği ({olculen_yukseklik} mm) tolerans dışı!")
-
-    with tab_tork:
-        st.subheader("🔩 Vidalı / Manyetik Kapak Tork Kontrolü")
-        st.caption("Kapakların gevşek kalmaması ve tüketici tarafından kolay açılabilmesi için torkmetre ölçümü.")
-
-        col_t1, col_t2 = st.columns(2)
-        with col_t1:
-            hedef_tork = st.slider("Hedef Sıkma Torku (Nm):", 0.5, 3.0, 1.5, 0.1)
-            olculen_tork = st.number_input("Torkmetreden Okunan Değer (Nm):", min_value=0.0, max_value=5.0, value=1.45, step=0.05)
-
-        with col_t2:
-            fark = abs(olculen_tork - hedef_tork)
-            if fark <= 0.25:
-                st.success(f"🟢 **TORK UYGUN:** Ölçülen {olculen_tork} Nm değeri hedef aralık içindedir.")
-            elif olculen_tork < hedef_tork:
-                st.warning(f"🟡 **GEVŞEK KAPAK:** {olculen_tork} Nm (Sızıntı riski var, sıkma kuvvetini artırın).")
-            else:
-                st.error(f"🔴 **AŞIRI SIKILMIŞ:** {olculen_tork} Nm (Kapak kırma veya diş atlatma riski).")
-
-# ==============================================================================
-# MODÜL 4: KALİTE İSTATİSTİKLERİ: SPC & PARETO ANALİZİ
-# ==============================================================================
-elif secilen_sayfa == "📊 Kalite İstatistikleri: SPC & Pareto Analizi":
-    st.title("📊 İstatistiksel Proses Kontrol (SPC) & Pareto Analizi")
-    st.caption("Parti Bazlı Süreç Değişkenliği (Shewhart Kontrol Kartı) ve En Sık Karşılaşılan Kalite Hataları")
-
-    tab_spc, tab_pareto = st.tabs(["📈 Shewhart X-bar Kontrol Kartı (SPC)", "📊 Pareto Kusur Analizi (80/20 Kuralı)"])
-
-    with tab_spc:
-        st.subheader("📈 Kritik Parametre Değişkenlik Takibi (Dansite Örneği)")
-        st.caption("Son 10 partide gelen esansın dansite değerlerinin Üst/Alt Kontrol Limitleri (UCL/LCL) içindeki kararlılığı.")
-
-        parti_no = [f"Parti {i+1}" for i in range(10)]
-        dansite_degerleri = [0.985, 0.988, 0.983, 0.990, 0.986, 0.992, 0.984, 0.987, 0.989, 0.986]
-
-        ort_d = np.mean(dansite_degerleri)
-        ucl = ort_d + 0.015  # Üst Limit
-        lcl = ort_d - 0.015  # Alt Limit
-
-        fig_spc = go.Figure()
-        fig_spc.add_trace(go.Scatter(x=parti_no, y=dansite_degerleri, mode='lines+markers', name='Ölçülen Dansite', line=dict(color='#00CC96', width=2)))
-        fig_spc.add_trace(go.Scatter(x=parti_no, y=[ucl]*10, mode='lines', name='Üst Kontrol Limiti (UCL)', line=dict(color='red', dash='dash')))
-        fig_spc.add_trace(go.Scatter(x=parti_no, y=[ort_d]*10, mode='lines', name='Proses Ortalaması', line=dict(color='yellow', dash='dot')))
-        fig_spc.add_trace(go.Scatter(x=parti_no, y=[lcl]*10, mode='lines', name='Alt Kontrol Limiti (LCL)', line=dict(color='red', dash='dash')))
-
-        fig_spc.update_layout(height=400, yaxis_title="Dansite (g/ml)", margin=dict(l=20, r=20, t=30, b=20))
-        st.plotly_chart(fig_spc, use_container_width=True)
-        st.info("💡 **SPC Yorumu:** Tüm partiler kontrol limitleri içerisindedir. Süreç kararlıdır ve rastgele sapmalar dışı özel nedenli bir hata eğilimi gözlenmemektedir.")
-
-    with tab_pareto:
-        st.subheader("📊 Pareto Kusur Analizi (En Çok Hata Veren %20)")
-        k_df = st.session_state["kusurlar"].sort_values(by="Hata Sayısı", ascending=False)
-        k_df["Kümülatif"] = k_df["Hata Sayısı"].cumsum()
-        k_df["Kümülatif Yüzde"] = (k_df["Kümülatif"] / k_df["Hata Sayısı"].sum()) * 100
-
-        fig_pareto = go.Figure()
-        fig_pareto.add_trace(go.Bar(x=k_df["Kusur Türü"], y=k_df["Hata Sayısı"], name="Kusur Sayısı", marker_color="#FF4B4B"))
-        fig_pareto.add_trace(go.Scatter(x=k_df["Kusur Türü"], y=k_df["Kümülatif Yüzde"], name="Kümülatif %", yaxis="y2", line=dict(color="#00CC96", width=2)))
-
-        fig_pareto.update_layout(
-            height=400,
-            yaxis=dict(title="Kusur Frekansı (Adet)"),
-            yaxis2=dict(title="Kümülatif %", overlaying="y", side="right", range=[0, 105]),
-            legend=dict(x=0.7, y=1.1, orientation="h"),
-            margin=dict(l=20, r=20, t=30, b=20)
-        )
-        st.plotly_chart(fig_pareto, use_container_width=True)
-        st.warning("⚠️ **Kalite Aksiyon Tavsiyesi:** Toplam hataların %60'ından fazlası **'Sızdırmazlık'** ve **'Koku Sapması'** kaynaklıdır. DÖF çalışmalarının bu iki konuya odaklanması fabrikanın fire maliyetini doğrudan düşürecektir.")
-
-# ==============================================================================
-# MODÜL 5: HİJYEN, MİKROBİYOLOJİ & STABİLİTE TESTİ
-# ==============================================================================
-elif secilen_sayfa == "🧫 Hijyen, Mikrobiyoloji & Stabilite Testi":
-    st.title("🧫 Mikrobiyoloji, Hat Sanitasyonu & Hızlandırılmış Stabilite")
-    st.caption("ISO 22716 GMP Gereklilikleri: Hat Temizliği Doğrulama ve Etüv İçi Hızlandırılmış Stabilite Takibi")
-
-    tab_mikro, tab_stab = st.tabs(["🧽 Hat Sanitasyonu & Mikrobiyoloji", "🔥 Hızlandırılmış Stabilite (40°C Etüv)"])
-
-    with tab_mikro:
-        st.subheader("🧽 Dolum Hattı & Kazan Sanitasyon Doğrulama (ATP Swab)")
-        col_m1, col_m2 = st.columns(2)
-        with col_m1:
-            hat_adi = st.selectbox("Denetlenen Hat / Ekipman:", ["Hat 1 - 50ml Dolum Nozulu", "Hat 2 - 100ml Otomatik Krimp Başlığı", "Kazan A - 1000L Paslanmaz Çelik Karıştırıcı"])
-            olculen_atp = st.number_input("Yüzeyden Okunan ATP Değeri (RLU):", min_value=0, max_value=2000, value=22)
-            mikro_cfu = st.number_input("Durulama Suyu Canlı Sayımı (CFU/ml):", min_value=0, max_value=500, value=0)
-
-        with col_m2:
-            st.markdown("#### Sanitasyon Onay Kararı:")
-            # Standart: ATP < 30 RLU Temiz, TVC < 10 CFU/ml Temiz
-            atp_ok = olculen_atp < 30
-            mikro_ok = mikro_cfu < 10
-
-            if atp_ok and mikro_ok:
-                st.success(f"🟢 **HİJYEN ONAYLANDI:** {hat_adi} mikrobiyolojik ve organik kirleticilerden arındırılmıştır. Dolum başlayabilir.")
-            else:
-                st.error("🔴 **HİJYEN YETERSİZ (BLOKE):**")
-                if not atp_ok:
-                    st.write(f"- ❌ Yüzey ATP değeri ({olculen_atp} RLU) sınırın (30 RLU) üzerinde!")
-                if not mikro_ok:
-                    st.write(f"- ❌ Mikrobiyolojik yük ({mikro_cfu} CFU/ml) tespit edildi!")
-                st.warning("Aksiyon: CIP (Clean-in-Place) sıcak su ve alkol ile dezenfeksiyon işlemini tekrarlayın.")
-
-    with tab_stab:
-        st.subheader("🔥 Hızlandırılmış Yaşlandırma & Stabilite Takibi (40°C & UV)")
-        st.caption("Parfümün 3 yıllık raf ömrünü simüle etmek için etüvde bekletilen şahit numunelerin fiziksel kontrolü.")
-
-        col_s1, col_s2 = st.columns(2)
-        with col_s1:
-            stab_lot = st.text_input("Stabilite Takip Numunesi:", value="Summer Breeze EDP - STB-01")
-            etuv_sure = st.selectbox("Etüvde Kalma Süresi (40°C):", ["1. Ay Kontrolü (1 Yıla Eşdeğer)", "2. Ay Kontrolü (2 Yıla Eşdeğer)", "3. Ay Kontrolü (3 Yıla Eşdeğer)"])
-            ayrisma = st.checkbox("Faz Ayrışması / Yağ Ayrılması Var mı?", value=False)
-            renk_donme = st.checkbox("Belirgin Renk Dönmesi / Kararma Var mı?", value=False)
-            koku_degisim = st.checkbox("Koku Bozulması / Ekşime Saptandı mı?", value=False)
-
-        with col_s2:
-            st.markdown("#### Stabilite Raporu:")
-            if not (ayrisma or renk_donme or koku_degisim):
-                st.success(f"🟢 **STABİL:** {stab_lot} için {etuv_sure} başarıyla tamamlanmıştır. Formülasyon fiziksel ve kimyasal olarak kararlıdır.")
-            else:
-                st.error(f"🔴 **STABİLİTE BOZULMASI:** {stab_lot} formülasyonunda sapma saptandı!")
-                if ayrisma:
-                    st.write("- ❌ Çözünürlük problemi / faz ayrışması tespit edildi (Solubilizer oranını artırın).")
-                if renk_donme:
-                    st.write("- ❌ Işık veya sıcaklık etkisiyle renk bozulması var (UV filtresi / BHT antioksidan gerekebilir).")
-                if koku_degisim:
-                    st.write("- ❌ Koku moleküllerinde oksidasyon saptandı.")
-
-# ==============================================================================
-# MODÜL 6: DEPO ETİKET BASICI & LOT PASAPORTU
-# ==============================================================================
-elif secilen_sayfa == "🏷️ Depo Etiket Basıcı & Lot Pasaportu":
-    st.title("🏷️ Depo Giriş Etiketi & Akıllı Lot Pasaportu")
-    s_df = st.session_state["numuneler"]
-    sec_lot = st.selectbox("İşlem Yapılacak Lot:", s_df["LOT NO"].unique())
-    ld = s_df[s_df["LOT NO"] == sec_lot].iloc[0]
-
-    col_e1, col_e2 = st.columns([1.2, 1])
-    with col_e1:
-        st.markdown("### 📋 Dijital Kalite Pasaportu")
-        k_renk = "#00b894" if ld["KABUL - RED"] == "KABUL" else ("#d63031" if ld["KABUL - RED"] == "RED" else "#fdcb6e")
-        st.markdown(
-            f"""
-            <div style='background: rgba(128,128,128,0.08); border-left: 6px solid {k_renk}; padding: 20px; border-radius: 8px;'>
-                <h3>{ld['HAMMADDE ADI']}</h3>
-                <p>Lot No: <b>{ld['LOT NO']}</b> | Üretici: <b>{ld['FİRMA İSMİ']}</b></p>
-                <p>Giriş: {ld['TARİH']} &nbsp;|&nbsp; SKT: {ld.get('SKT (SON KULLANMA)', '-')}</p>
-                <p>Kontrol Eden: {ld['SERTİFİKA KONTROLÜ / ANALİZ YAPAN']}</p>
-                <p>IFRA: {ld.get('IFRA UYGUNLUK', '-')}</p>
-                <p>Mevcut Durum: <b style='color:{k_renk}; font-size:18px;'>{ld['KABUL - RED']}</b></p>
-            </div>
-            """, unsafe_allow_html=True
-        )
-
-    with col_e2:
-        st.markdown("### 🖨️ Yazıcı Uyumlu Depo Termal Etiketi")
-        bg = "#27ae60" if ld["KABUL - RED"] == "KABUL" else ("#c0392b" if ld["KABUL - RED"] == "RED" else "#f39c12")
-        title = "KABUL EDİLDİ - ÜRETİME UYGUNDUR" if ld["KABUL - RED"] == "KABUL" else ("RED - KULLANILAMAZ" if ld["KABUL - RED"] == "RED" else "KARANTİNA")
-        st.markdown(
-            f"""
-            <div style='background: white; color: black; padding: 20px; border-radius: 6px; border: 3px solid #333; font-family: monospace;'>
-                <div style='background: {bg}; color: white; text-align: center; padding: 6px; font-weight: 900; margin-bottom: 10px;'>{title}</div>
-                <p style='margin: 3px 0;'><b>ÜRÜN:</b> {ld['HAMMADDE ADI']}</p>
-                <p style='margin: 3px 0;'><b>LOT:</b> {ld['LOT NO']}</p>
-                <p style='margin: 3px 0;'><b>FİRMA:</b> {ld['FİRMA İSMİ']}</p>
-                <p style='margin: 3px 0;'><b>TARİH:</b> {ld['TARİH']}</p>
-                <hr style='border: 1px dashed black; margin: 8px 0;'>
-                <p style='text-align: center; margin: 0; font-size: 11px;'>MİYAETP KALİTE GÜVENCE DİREKTÖRLÜĞÜ</p>
-            </div>
-            """, unsafe_allow_html=True
-        )
+    st.download_button(
+        label="📥 Güncel Tabloyu Fabrika Formatında Excel Olarak İndir",
+        data=numune_out_io.getvalue(),
+        file_name="Kalite_Kontrol_Numune_Listesi.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
 # --- İMZA ALANI (SIDEBAR ALT) ---
 st.sidebar.markdown(
@@ -496,9 +660,8 @@ st.sidebar.markdown(
     <div style='background-color: rgba(128, 128, 128, 0.1); padding: 12px; border-radius: 8px; text-align: center; margin-top: 20px;'>
         <p style='margin: 0; font-size: 13px; font-weight: bold;'>Developed by</p>
         <p style='margin: 0; font-size: 18px; color: #FF4B4B; font-weight: 800;'>⚡ miyaetp</p>
-        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v7.0.0 • Total Quality Control Edition</p>
+        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v4.2.0 • Fixed Header Edition</p>
     </div>
     """,
     unsafe_allow_html=True
 )
-
