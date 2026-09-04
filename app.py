@@ -285,11 +285,11 @@ if secilen_sayfa == "📊 Tedarikçi Kalite & Karar Paneli":
 
     st.divider()
 
-    # YENİLENEN SEKMELER (PAC-MAN EKLENDİ)
+    # YENİLENEN SEKMELER (GELİŞMİŞ ZOR PAC-MAN)
     tab1, tab2, tab_pacman, tab3, tab4, tab5 = st.tabs([
         "📊 Genel Kalite Sıralaması",
         "🎯 Harcama & Risk Matrisi",
-        "🕹️ Pac-Man Mola Odası",
+        "🕹️ Retro Pac-Man (Hard Arcade)",
         "⚔️ İki Tedarikçi Kıyaslama",
         "📈 6 Aylık Trend & Karne",
         "📄 Resmi DÖF & İhtar Mektubu"
@@ -331,74 +331,94 @@ if secilen_sayfa == "📊 Tedarikçi Kalite & Karar Paneli":
             fig_scatter.update_layout(height=400, margin=dict(l=20, r=20, t=30, b=20))
             st.plotly_chart(fig_scatter, use_container_width=True)
 
-    # --- PAC-MAN OYUNU SEKRESİ ---
+    # --- GELİŞMİŞ & ZOR PAC-MAN OYUNU ---
     with tab_pacman:
-        st.subheader("🕹️ Retro Pac-Man Kalite Mola Alanı")
-        st.caption("Yön tuşları veya W, A, S, D tuşlarını kullanarak Pac-Man'i yönlendirin, hayaletlerden kaçın!")
+        st.subheader("🕹️ Pac-Man: Hardcore Arcade Edition")
+        st.caption("🎮 Yön tuşları veya W-A-S-D ile kontrol edin. Dikkat: Hayaletler akıllıdır ve doğrudan sizi takip eder!")
 
-        pacman_html = """
+        pacman_pro_html = """
         <!DOCTYPE html>
         <html>
         <head>
           <style>
             body {
               margin: 0;
-              background-color: #0d1117;
+              background-color: #0e1117;
               display: flex;
               flex-direction: column;
               align-items: center;
-              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              font-family: 'Courier New', Courier, monospace;
               color: white;
+              user-select: none;
             }
-            #hud {
+            #header {
               display: flex;
-              gap: 30px;
-              font-size: 20px;
-              font-weight: bold;
-              margin-bottom: 10px;
+              justify-content: space-between;
+              width: 380px;
+              margin-bottom: 8px;
+              font-size: 16px;
+              font-weight: 900;
+              letter-spacing: 1px;
             }
-            .score-box { color: #f1c40f; }
-            .lives-box { color: #e74c3c; }
+            .score-glow { color: #f1c40f; text-shadow: 0 0 10px rgba(241,196,15,0.7); }
+            .lives-glow { color: #ff4757; text-shadow: 0 0 10px rgba(255,71,87,0.7); }
+            .high-glow { color: #2ed573; text-shadow: 0 0 10px rgba(46,213,115,0.7); }
             canvas {
-              border: 3px solid #34495e;
+              border: 3px solid #1e90ff;
               border-radius: 8px;
-              background-color: #000;
-              box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+              background-color: #000000;
+              box-shadow: 0 0 25px rgba(30, 144, 255, 0.4);
             }
-            .btn-reset {
-              margin-top: 12px;
-              padding: 8px 20px;
-              background-color: #e67e22;
+            #controls {
+              margin-top: 10px;
+              display: flex;
+              gap: 15px;
+            }
+            button.game-btn {
+              padding: 7px 18px;
+              background: linear-gradient(135deg, #ff4757, #ff6b81);
               border: none;
               color: white;
               font-weight: bold;
               border-radius: 6px;
               cursor: pointer;
+              transition: transform 0.1s, box-shadow 0.2s;
+              font-family: inherit;
             }
-            .btn-reset:hover { background-color: #d35400; }
+            button.game-btn:hover {
+              transform: scale(1.05);
+              box-shadow: 0 0 12px rgba(255,71,87,0.8);
+            }
           </style>
         </head>
         <body>
-          <div id="hud">
-            <div class="score-box">SKOR: <span id="score">0</span></div>
-            <div class="lives-box">CAN: <span id="lives">3</span></div>
+          <div id="header">
+            <span class="score-glow">SKOR: <span id="score">0</span></span>
+            <span class="lives-glow">CAN: <span id="lives">❤❤❤</span></span>
+            <span class="high-glow">EN YÜKSEK: <span id="high">0</span></span>
           </div>
-          <canvas id="pacman" width="380" height="380"></canvas>
-          <button class="btn-reset" onclick="resetGame()">Yeni Oyun Başlat</button>
+
+          <canvas id="gameCanvas" width="380" height="380"></canvas>
+
+          <div id="controls">
+            <button class="game-btn" onclick="initGame()">YENİDEN BAŞLAT</button>
+          </div>
 
           <script>
-            const canvas = document.getElementById("pacman");
+            const canvas = document.getElementById("gameCanvas");
             const ctx = canvas.getContext("2d");
             const scoreEl = document.getElementById("score");
             const livesEl = document.getElementById("lives");
+            const highEl = document.getElementById("high");
 
             const CELL = 20;
             const ROWS = 19;
             const COLS = 19;
 
-            let map = [
+            // 1: Duvar, 2: Yem, 3: Power Pellet (Süper Yem), 0: Boş
+            const baseMap = [
               [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-              [1,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,1],
+              [1,3,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,3,1],
               [1,2,1,1,2,1,1,1,2,1,2,1,1,1,2,1,1,2,1],
               [1,2,1,1,2,1,1,1,2,1,2,1,1,1,2,1,1,2,1],
               [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
@@ -413,157 +433,282 @@ if secilen_sayfa == "📊 Tedarikçi Kalite & Karar Paneli":
               [1,1,1,1,2,1,2,1,1,1,1,1,2,1,2,1,1,1,1],
               [1,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,1],
               [1,2,1,1,2,1,1,1,2,1,2,1,1,1,2,1,1,2,1],
-              [1,2,2,1,2,2,2,2,2,0,2,2,2,2,2,1,2,2,1],
+              [1,3,2,1,2,2,2,2,2,0,2,2,2,2,2,1,2,3,1],
               [1,1,2,1,2,1,2,1,1,1,1,1,2,1,2,1,2,1,1],
               [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
             ];
 
-            let originalMap = JSON.parse(JSON.stringify(map));
-            let score = 0;
-            let lives = 3;
-            let gameOver = false;
+            let map, score = 0, highScore = 0, lives = 3, gameOver = false;
+            let frightTimer = 0;
 
-            let pacman = { x: 9, y: 16, dx: 0, dy: 0, nextDx: 0, nextDy: 0, mouth: 0.2, mouthSpeed: 0.03 };
-            let ghosts = [
-              { x: 9, y: 9, dx: 1, dy: 0, color: "#e74c3c" },
-              { x: 9, y: 10, dx: -1, dy: 0, color: "#3498db" },
-              { x: 8, y: 9, dx: 0, dy: 1, color: "#e67e22" }
-            ];
+            // Karakter tanımları (Pixel-based smooth physics)
+            let pacman = {
+              x: 9 * CELL, y: 16 * CELL,
+              speed: 2.5,
+              dx: 0, dy: 0,
+              nextDx: 0, nextDy: 0,
+              angle: 0, mouth: 0.2, mouthSpeed: 0.04
+            };
 
-            function resetPositions() {
-              pacman.x = 9; pacman.y = 16;
-              pacman.dx = 0; pacman.dy = 0;
-              pacman.nextDx = 0; pacman.nextDy = 0;
-              ghosts[0].x = 9; ghosts[0].y = 9; ghosts[0].dx = 1; ghosts[0].dy = 0;
-              ghosts[1].x = 9; ghosts[1].y = 10; ghosts[1].dx = -1; ghosts[1].dy = 0;
-              ghosts[2].x = 8; ghosts[2].y = 9; ghosts[2].dx = 0; ghosts[2].dy = 1;
+            // 4 Farklı Karakterli Hayalet
+            let ghosts = [];
+
+            function createGhosts() {
+              return [
+                { x: 9 * CELL, y: 8 * CELL, dx: 0, dy: -2, speed: 2.2, color: "#ff4757", name: "Blinky" }, // Saldırgan
+                { x: 9 * CELL, y: 10 * CELL, dx: 2, dy: 0, speed: 2.0, color: "#ff6b81", name: "Pinky" },  // Pusu kurucu
+                { x: 8 * CELL, y: 9 * CELL, dx: -2, dy: 0, speed: 1.9, color: "#1e90ff", name: "Inky" },   // Takipçi
+                { x: 10 * CELL, y: 9 * CELL, dx: 2, dy: 0, speed: 1.8, color: "#ffa502", name: "Clyde" }   // Rastgele
+              ];
             }
 
-            function resetGame() {
-              map = JSON.parse(JSON.stringify(originalMap));
+            function initGame() {
+              map = JSON.parse(JSON.stringify(baseMap));
               score = 0;
               lives = 3;
               gameOver = false;
+              frightTimer = 0;
+              resetPacman();
+              ghosts = createGhosts();
               scoreEl.innerText = score;
-              livesEl.innerText = lives;
-              resetPositions();
+              updateLivesDisplay();
+            }
+
+            function resetPacman() {
+              pacman.x = 9 * CELL;
+              pacman.y = 16 * CELL;
+              pacman.dx = 0; pacman.dy = 0;
+              pacman.nextDx = 0; pacman.nextDy = 0;
+              pacman.angle = 0;
+            }
+
+            function updateLivesDisplay() {
+              livesEl.innerText = "❤".repeat(Math.max(0, lives));
             }
 
             window.addEventListener("keydown", (e) => {
-              if (["ArrowUp", "KeyW"].includes(e.code)) { pacman.nextDx = 0; pacman.nextDy = -1; e.preventDefault(); }
-              if (["ArrowDown", "KeyS"].includes(e.code)) { pacman.nextDx = 0; pacman.nextDy = 1; e.preventDefault(); }
-              if (["ArrowLeft", "KeyA"].includes(e.code)) { pacman.nextDx = -1; pacman.nextDy = 0; e.preventDefault(); }
-              if (["ArrowRight", "KeyD"].includes(e.code)) { pacman.nextDx = 1; pacman.nextDy = 0; e.preventDefault(); }
+              if (["ArrowUp", "KeyW"].includes(e.code)) { pacman.nextDx = 0; pacman.nextDy = -pacman.speed; e.preventDefault(); }
+              if (["ArrowDown", "KeyS"].includes(e.code)) { pacman.nextDx = 0; pacman.nextDy = pacman.speed; e.preventDefault(); }
+              if (["ArrowLeft", "KeyA"].includes(e.code)) { pacman.nextDx = -pacman.speed; pacman.nextDy = 0; e.preventDefault(); }
+              if (["ArrowRight", "KeyD"].includes(e.code)) { pacman.nextDx = pacman.speed; pacman.nextDy = 0; e.preventDefault(); }
             });
 
-            function canMove(x, y, dx, dy) {
-              let nx = x + dx;
-              let ny = y + dy;
-              if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) return false;
-              return map[ny][nx] !== 1;
+            function isWall(gx, gy) {
+              if (gx < 0 || gx >= COLS || gy < 0 || gy >= ROWS) return false;
+              return map[gy][gx] === 1;
+            }
+
+            function canMove(px, py, vx, vy) {
+              let nextX = px + vx;
+              let nextY = py + vy;
+              
+              // Köşe noktalarıyla duvar çarpışma kontrolü
+              let r = 8;
+              let p1 = { x: Math.floor((nextX + CELL/2 - r) / CELL), y: Math.floor((nextY + CELL/2 - r) / CELL) };
+              let p2 = { x: Math.floor((nextX + CELL/2 + r) / CELL), y: Math.floor((nextY + CELL/2 - r) / CELL) };
+              let p3 = { x: Math.floor((nextX + CELL/2 - r) / CELL), y: Math.floor((nextY + CELL/2 + r) / CELL) };
+              let p4 = { x: Math.floor((nextX + CELL/2 + r) / CELL), y: Math.floor((nextY + CELL/2 + r) / CELL) };
+
+              return !isWall(p1.x, p1.y) && !isWall(p2.x, p2.y) && !isWall(p3.x, p3.y) && !isWall(p4.x, p4.y);
             }
 
             function update() {
               if (gameOver) return;
 
+              // Tünel Geçişi
+              if (pacman.x < -CELL) pacman.x = canvas.width;
+              if (pacman.x > canvas.width) pacman.x = -CELL;
+
+              // İstenen yöne dönebilir mi?
               if (canMove(pacman.x, pacman.y, pacman.nextDx, pacman.nextDy)) {
                 pacman.dx = pacman.nextDx;
                 pacman.dy = pacman.nextDy;
+                if (pacman.dx > 0) pacman.angle = 0;
+                if (pacman.dx < 0) pacman.angle = Math.PI;
+                if (pacman.dy > 0) pacman.angle = Math.PI / 2;
+                if (pacman.dy < 0) pacman.angle = -Math.PI / 2;
               }
 
+              // Mevcut yönde ilerle
               if (canMove(pacman.x, pacman.y, pacman.dx, pacman.dy)) {
                 pacman.x += pacman.dx;
                 pacman.y += pacman.dy;
               }
 
-              if (map[pacman.y][pacman.x] === 2) {
-                map[pacman.y][pacman.x] = 0;
-                score += 10;
-                scoreEl.innerText = score;
+              // Yem Yeme Mekaniği
+              let curGridX = Math.floor((pacman.x + CELL/2) / CELL);
+              let curGridY = Math.floor((pacman.y + CELL/2) / CELL);
+
+              if (curGridX >= 0 && curGridX < COLS && curGridY >= 0 && curGridY < ROWS) {
+                if (map[curGridY][curGridX] === 2) {
+                  map[curGridY][curGridX] = 0;
+                  score += 10;
+                  scoreEl.innerText = score;
+                } else if (map[curGridY][curGridX] === 3) {
+                  map[curGridY][curGridX] = 0;
+                  score += 50;
+                  frightTimer = 300; // ~5 saniye hayaletler korkar
+                  scoreEl.innerText = score;
+                }
               }
 
-              // Hayalet Hareketi
-              ghosts.forEach(g => {
-                let directions = [
-                  {dx: 1, dy: 0}, {dx: -1, dy: 0},
-                  {dx: 0, dy: 1}, {dx: 0, dy: -1}
+              if (frightTimer > 0) frightTimer--;
+
+              // Hayalet Yapay Zekası & Hareketi
+              ghosts.forEach((g, idx) => {
+                let speed = (frightTimer > 0) ? g.speed * 0.6 : g.speed;
+                let dirs = [
+                  { dx: speed, dy: 0 },
+                  { dx: -speed, dy: 0 },
+                  { dx: 0, dy: speed },
+                  { dx: 0, dy: -speed }
                 ];
-                let valid = directions.filter(d => canMove(g.x, g.y, d.dx, d.dy));
-                if (valid.length > 0) {
-                  let chosen = valid[Math.floor(Math.random() * valid.length)];
-                  g.x += chosen.dx;
-                  g.y += chosen.dy;
+
+                // Geri dönmeyi engelle
+                let validDirs = dirs.filter(d => {
+                  if (d.dx === -g.dx && d.dy === -g.dy) return false;
+                  return canMove(g.x, g.y, d.dx, d.dy);
+                });
+
+                if (validDirs.length === 0) {
+                  validDirs = dirs.filter(d => canMove(g.x, g.y, d.dx, d.dy));
                 }
 
-                if (Math.abs(g.x - pacman.x) <= 0.6 && Math.abs(g.y - pacman.y) <= 0.6) {
-                  lives--;
-                  livesEl.innerText = lives;
-                  if (lives <= 0) {
-                    gameOver = true;
-                    alert("OYUN BİTTİ! Toplam Skor: " + score);
+                if (validDirs.length > 0) {
+                  // Agresif Hedefleme Mantığı
+                  if (idx === 0 && frightTimer === 0) {
+                    // Blinky: Doğrudan Pac-Man'e olan mesafeyi minimize eder
+                    validDirs.sort((a, b) => {
+                      let distA = Math.hypot((g.x + a.dx) - pacman.x, (g.y + a.dy) - pacman.y);
+                      let distB = Math.hypot((g.x + b.dx) - pacman.x, (g.y + b.dy) - pacman.y);
+                      return distA - distB;
+                    });
+                    g.dx = validDirs[0].dx;
+                    g.dy = validDirs[0].dy;
                   } else {
-                    resetPositions();
+                    // Diğerleri kavşakta rastgele veya hafif takip
+                    if (Math.random() < 0.15 || !canMove(g.x, g.y, g.dx, g.dy)) {
+                      let picked = validDirs[Math.floor(Math.random() * validDirs.length)];
+                      g.dx = picked.dx;
+                      g.dy = picked.dy;
+                    }
+                  }
+                }
+
+                g.x += g.dx;
+                g.y += g.dy;
+
+                // Çarpışma Kontrolü
+                let dist = Math.hypot((g.x + CELL/2) - (pacman.x + CELL/2), (g.y + CELL/2) - (pacman.y + CELL/2));
+                if (dist < 14) {
+                  if (frightTimer > 0) {
+                    // Hayaleti ye
+                    score += 200;
+                    scoreEl.innerText = score;
+                    g.x = 9 * CELL;
+                    g.y = 9 * CELL;
+                  } else {
+                    // Can kaybet
+                    lives--;
+                    updateLivesDisplay();
+                    if (lives <= 0) {
+                      gameOver = true;
+                      if (score > highScore) {
+                        highScore = score;
+                        highEl.innerText = highScore;
+                      }
+                      setTimeout(() => alert("💥 OYUN BİTTİ! Toplam Kalite Skoru: " + score), 50);
+                    } else {
+                      resetPacman();
+                    }
                   }
                 }
               });
 
+              // Ağız animasyonu
               pacman.mouth += pacman.mouthSpeed;
-              if (pacman.mouth > 0.35 || pacman.mouth < 0.05) {
-                pacman.mouthSpeed = -pacman.mouthSpeed;
-              }
+              if (pacman.mouth > 0.38 || pacman.mouth < 0.05) pacman.mouthSpeed = -pacman.mouthSpeed;
             }
 
             function draw() {
               ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-              // Labirenti Çiz
+              // 1. Labirent & Yemleri Çiz
               for (let r = 0; r < ROWS; r++) {
                 for (let c = 0; c < COLS; c++) {
-                  if (map[r][c] === 1) {
+                  let tile = map[r][c];
+                  if (tile === 1) {
                     ctx.fillStyle = "#1e3799";
                     ctx.fillRect(c * CELL, r * CELL, CELL, CELL);
-                  } else if (map[r][c] === 2) {
+                    ctx.strokeStyle = "#4a69bd";
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(c * CELL + 2, r * CELL + 2, CELL - 4, CELL - 4);
+                  } else if (tile === 2) {
                     ctx.fillStyle = "#f8c291";
                     ctx.beginPath();
-                    ctx.arc(c * CELL + CELL / 2, r * CELL + CELL / 2, 3, 0, Math.PI * 2);
+                    ctx.arc(c * CELL + CELL/2, r * CELL + CELL/2, 2.5, 0, Math.PI * 2);
                     ctx.fill();
+                  } else if (tile === 3) {
+                    // Power Pellet (Glow efekti)
+                    ctx.fillStyle = "#ffffff";
+                    ctx.shadowColor = "#f1c40f";
+                    ctx.shadowBlur = 8;
+                    ctx.beginPath();
+                    ctx.arc(c * CELL + CELL/2, r * CELL + CELL/2, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
                   }
                 }
               }
 
-              // Pac-Man Çiz
+              // 2. Pac-Man Çiz
               ctx.fillStyle = "#f1c40f";
+              ctx.shadowColor = "#f1c40f";
+              ctx.shadowBlur = 10;
               ctx.beginPath();
-              let angle = 0;
-              if (pacman.dx === 1) angle = 0;
-              if (pacman.dx === -1) angle = Math.PI;
-              if (pacman.dy === 1) angle = Math.PI / 2;
-              if (pacman.dy === -1) angle = -Math.PI / 2;
-
-              let startAngle = angle + pacman.mouth;
-              let endAngle = angle + Math.PI * 2 - pacman.mouth;
-              ctx.arc(pacman.x * CELL + CELL / 2, pacman.y * CELL + CELL / 2, CELL / 2 - 1, startAngle, endAngle);
-              ctx.lineTo(pacman.x * CELL + CELL / 2, pacman.y * CELL + CELL / 2);
+              let startAngle = pacman.angle + pacman.mouth;
+              let endAngle = pacman.angle + Math.PI * 2 - pacman.mouth;
+              ctx.arc(pacman.x + CELL/2, pacman.y + CELL/2, CELL/2 - 1, startAngle, endAngle);
+              ctx.lineTo(pacman.x + CELL/2, pacman.y + CELL/2);
               ctx.fill();
+              ctx.shadowBlur = 0;
 
-              // Hayaletleri Çiz
+              // 3. Hayaletleri Çiz
               ghosts.forEach(g => {
-                ctx.fillStyle = g.color;
+                ctx.fillStyle = (frightTimer > 0) ? ((frightTimer < 80 && Math.floor(frightTimer / 10) % 2 === 0) ? "#ffffff" : "#2ed573") : g.color;
                 ctx.beginPath();
-                ctx.arc(g.x * CELL + CELL / 2, g.y * CELL + CELL / 2, CELL / 2 - 2, 0, Math.PI * 2);
+                ctx.arc(g.x + CELL/2, g.y + CELL/2 - 2, CELL/2 - 2, Math.PI, 0, false);
+                ctx.lineTo(g.x + CELL - 2, g.y + CELL);
+                ctx.lineTo(g.x + 2, g.y + CELL);
+                ctx.fill();
+
+                // Gözler
+                ctx.fillStyle = "#ffffff";
+                ctx.beginPath();
+                ctx.arc(g.x + CELL/2 - 4, g.y + CELL/2 - 3, 3, 0, Math.PI*2);
+                ctx.arc(g.x + CELL/2 + 4, g.y + CELL/2 - 3, 3, 0, Math.PI*2);
+                ctx.fill();
+                ctx.fillStyle = "#000000";
+                ctx.beginPath();
+                ctx.arc(g.x + CELL/2 - 3, g.y + CELL/2 - 3, 1.5, 0, Math.PI*2);
+                ctx.arc(g.x + CELL/2 + 5, g.y + CELL/2 - 3, 1.5, 0, Math.PI*2);
                 ctx.fill();
               });
             }
 
-            setInterval(() => {
+            function gameLoop() {
               update();
               draw();
-            }, 180);
+              requestAnimationFrame(gameLoop);
+            }
+
+            initGame();
+            requestAnimationFrame(gameLoop);
           </script>
         </body>
         </html>
         """
-        components.html(pacman_html, height=500)
+        components.html(pacman_pro_html, height=500)
 
     with tab3:
         st.subheader("⚔️ İki Tedarikçi Birebir Kıyaslaması (Radar Analizi)")
@@ -864,7 +1009,7 @@ st.sidebar.markdown(
     <div style='background-color: rgba(128, 128, 128, 0.1); padding: 12px; border-radius: 8px; text-align: center; margin-top: 20px;'>
         <p style='margin: 0; font-size: 13px; font-weight: bold;'>Developed by</p>
         <p style='margin: 0; font-size: 18px; color: #FF4B4B; font-weight: 800;'>⚡ miyaetp</p>
-        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v4.5.0 • Pac-Man Retro Edition</p>
+        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v4.6.0 • Pro Pac-Man 60FPS Edition</p>
     </div>
     """,
     unsafe_allow_html=True
