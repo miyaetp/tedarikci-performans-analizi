@@ -14,12 +14,15 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- TÜM STREAMLIT & GITHUB REKLAMLARINI VE MENÜLERİNİ GİZLEME ---
-hide_streamlit_elements = """
+# --- TÜM STREAMLIT & GITHUB REKLAMLARINI GİZLEME + ŞEKİLLİ SOL MENÜ ANİMASYONU ---
+hide_and_style_css = """
     <style>
+    /* Üst menü ve footer reklamlarını gizle */
     #MainMenu {visibility: hidden; display: none !important;}
-    header {visibility: hidden; display: none !important;}
+    header {background: transparent !important;}
     footer {visibility: hidden; display: none !important;}
+    
+    /* GitHub rozetleri ve alt toolbar tamamen yok */
     .viewerBadge_container__1QSob,
     .viewerBadge_link__1S137,
     [data-testid="stStatusWidget"],
@@ -28,13 +31,44 @@ hide_streamlit_elements = """
         visibility: hidden !important;
         display: none !important;
     }
+
+    /* Sol menü açma/kapama butonuna şekilli neon & animasyonlu tasarım */
+    [data-testid="stSidebarCollapseButton"] {
+        visibility: visible !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background: linear-gradient(135deg, #1f2430 0%, #0e1117 100%) !important;
+        border: 1px solid rgba(255, 75, 75, 0.4) !important;
+        box-shadow: 0 4px 15px rgba(255, 75, 75, 0.25) !important;
+        border-radius: 10px !important;
+        padding: 6px !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        color: #ff4b4b !important;
+    }
+
+    /* Üzerine gelince parlasın, büyüsün ve sağa doğru atsın */
+    [data-testid="stSidebarCollapseButton"]:hover {
+        transform: scale(1.12) translateX(3px) !important;
+        border-color: #ff4b4b !important;
+        box-shadow: 0 0 20px rgba(255, 75, 75, 0.6) !important;
+        background: linear-gradient(135deg, #ff4b4b 0%, #b81d24 100%) !important;
+        color: #ffffff !important;
+    }
+
+    /* Menü açılıp kapanırken pürüzsüz kayma animasyonu */
+    section[data-testid="stSidebar"] {
+        transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), width 0.4s ease !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+    }
+
     .block-container {
         padding-top: 1.5rem !important;
         padding-bottom: 2rem !important;
     }
     </style>
 """
-st.markdown(hide_streamlit_elements, unsafe_allow_html=True)
+st.markdown(hide_and_style_css, unsafe_allow_html=True)
 
 # --- 2. GÜVENLİK VE GİRİŞ EKRANI (AUTHENTICATION) ---
 SISTEM_SIFRESI = "miya123"
@@ -68,7 +102,7 @@ if not st.session_state["authenticated"]:
         st.caption("⚡ Developed by **miyaetp**")
     st.stop()
 
-# --- 3. FABRİKA KALİTE NUMUNE ŞABLON YAPISI ---
+# --- 3. FABRİKA KALİTE NUMUNE ŞABLON YAPISI (15 SÜTUN) ---
 KALITE_KOLONLARI = [
     "HAMMADDE ADI",
     "FİRMA İSMİ",
@@ -403,7 +437,6 @@ else:
                         processed_df = pd.DataFrame()
                         bugun = datetime.date.today().strftime("%Y-%m-%d")
 
-                        # Sütunları Büyük Harfe Çevirerek Esnek Arama Fonksiyonu
                         def find_column(patterns):
                             for col in raw_df.columns:
                                 col_clean = str(col).upper().replace("İ", "I").replace("I", "I").strip()
@@ -482,7 +515,6 @@ else:
                         col = find_column(["REACH", "DOGAL", "REACH NO"])
                         processed_df["DOĞAL / REACH NO"] = raw_df[col].fillna("-").astype(str) if col else "-"
 
-                        # Tabloyu tam sırada hizalama
                         final_df = processed_df[KALITE_KOLONLARI]
 
                         col_btn1, col_btn2 = st.columns(2)
@@ -600,7 +632,6 @@ else:
     with col_f2:
         firma_ara = st.text_input("🔍 Firma veya Hammadde Ara:", placeholder="Örn: Grasse veya Etanol...")
 
-    # Filtreleme Motoru
     tablo_df = st.session_state["numuneler"].copy()
     if karar_filtresi != "Tümü":
         tablo_df = tablo_df[tablo_df["KABUL - RED"] == karar_filtresi]
@@ -614,7 +645,6 @@ else:
 
     st.dataframe(tablo_df, use_container_width=True)
 
-    # Excel Olarak İndirme (Orijinal 15 Sütun Formatında)
     numune_out_io = io.BytesIO()
     with pd.ExcelWriter(numune_out_io, engine='openpyxl') as writer:
         st.session_state["numuneler"].to_excel(writer, index=False, sheet_name='Kalite_Kontrol_Listesi')
@@ -632,7 +662,7 @@ st.sidebar.markdown(
     <div style='background-color: rgba(128, 128, 128, 0.1); padding: 12px; border-radius: 8px; text-align: center; margin-top: 20px;'>
         <p style='margin: 0; font-size: 13px; font-weight: bold;'>Developed by</p>
         <p style='margin: 0; font-size: 18px; color: #FF4B4B; font-weight: 800;'>⚡ miyaetp</p>
-        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v4.0.0 • 15-Column Factory Edition</p>
+        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v4.1.0 • Animated Sidebar & Factory Edition</p>
     </div>
     """,
     unsafe_allow_html=True
