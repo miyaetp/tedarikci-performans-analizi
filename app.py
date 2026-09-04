@@ -1,4 +1,5 @@
 import io
+import random
 import datetime
 import streamlit as st
 import pandas as pd
@@ -17,7 +18,6 @@ st.set_page_config(
 # --- SOL MENÜ AÇMA BUTONUNU EKRANA ÇAKAN VE ASLA KAYBETMEYEN CSS ---
 sidebar_fix_css = """
     <style>
-    /* Reklam ve gereksiz Streamlit öğelerini gizle */
     #MainMenu {visibility: hidden !important;}
     footer {visibility: hidden !important;}
     .viewerBadge_container__1QSob,
@@ -27,13 +27,11 @@ sidebar_fix_css = """
         display: none !important;
     }
 
-    /* Header'ı yok etme, şeffaf yap ki sol menü açma oku yok olmasın! */
     header[data-testid="stHeader"] {
         background-color: transparent !important;
         z-index: 10000 !important;
     }
 
-    /* Sol menü açma okunu ekranda parlayan kırmızı şık bir butona çevir */
     [data-testid="stSidebarCollapseButton"], 
     button[data-testid="baseButton-headerNoPadding"],
     [data-testid="collapsedControl"] {
@@ -100,7 +98,26 @@ if not st.session_state["authenticated"]:
         st.caption("⚡ Developed by **miyaetp**")
     st.stop()
 
-# --- 3. FABRİKA KALİTE NUMUNE ŞABLON YAPISI (15 SÜTUN) ---
+# --- 3. OYUN SİSTEMİ HAFIZASI ---
+GAME_SCENARIOS = [
+    {"urun": "Fransız Lavanta Esansı", "lot": "LOT-882", "durum_text": "GC-MS saflık %99.2, IFRA sertifikası ve koku profili tam uygun.", "dogru": "KABUL", "ipucu": "Tüm parametreler standartlara uygun."},
+    {"urun": "100ml Cam Parfüm Şişesi", "lot": "LOT-412", "durum_text": "Basınç testinde 50 adetten 6 tanesinde mikroskobik çatlak ve sızıntı saptandı.", "dogru": "RED", "ipucu": "Sızdırmazlık eşiği aşıldı!"},
+    {"urun": "Kozmetik Denatüre Alkol %96", "lot": "LOT-901", "durum_text": "Alkol derecesi %96.4, yabancı koku yok, analiz sertifikası eksiksiz.", "dogru": "KABUL", "ipucu": "Mükemmel saflık derecesi."},
+    {"urun": "Zamak Manyetik Kapak", "lot": "LOT-303", "durum_text": "Manyetik tutuş kuvveti zayıf, kapak şişeden kendiliğinden düşüyor.", "dogru": "RED", "ipucu": "Manyetik tutuş toleransı tutmuyor."},
+    {"urun": "Amber & Vanilya Koku Yağı", "lot": "LOT-550", "durum_text": "Koku notalarında belirgin yanık solvent kokusu var, renk bulanık.", "dogru": "RED", "ipucu": "Organoleptik testte bariz hata var."},
+    {"urun": "Altın Yaldızlı Sprey Pompa", "lot": "LOT-124", "durum_text": "100 basım dayanıklılık testi başarıyla geçti, homojen mikro püskürtme sağlıyor.", "dogru": "KABUL", "ipucu": "Püskürtme ve krimp testi başarılı."}
+]
+
+if "game_score" not in st.session_state:
+    st.session_state["game_score"] = 0
+if "game_streak" not in st.session_state:
+    st.session_state["game_streak"] = 0
+if "current_case_idx" not in st.session_state:
+    st.session_state["current_case_idx"] = random.randint(0, len(GAME_SCENARIOS) - 1)
+if "game_last_msg" not in st.session_state:
+    st.session_state["game_last_msg"] = None
+
+# --- 4. FABRİKA KALİTE NUMUNE ŞABLON YAPISI (15 SÜTUN) ---
 KALITE_KOLONLARI = [
     "HAMMADDE ADI",
     "FİRMA İSMİ",
@@ -174,7 +191,7 @@ if "numuneler" not in st.session_state:
         }
     ])
 
-# --- 4. TEDARİKÇİ ERP VERİLERİ ---
+# --- 5. TEDARİKÇİ ERP VERİLERİ ---
 @st.cache_data
 def get_sample_data():
     return pd.DataFrame({
@@ -287,10 +304,11 @@ if secilen_sayfa == "📊 Tedarikçi Kalite & Karar Paneli":
 
     st.divider()
 
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    # YENİLENEN SEKMELER (WHAT-IF SİLİNDİ, OYUN EKLENDİ)
+    tab1, tab2, tab_game, tab3, tab4, tab5 = st.tabs([
         "📊 Genel Kalite Sıralaması",
         "🎯 Harcama & Risk Matrisi",
-        "🔮 What-If İyileştirme Simülatörü",
+        "🎮 Kalite Refleks Oyunu",
         "⚔️ İki Tedarikçi Kıyaslama",
         "📈 6 Aylık Trend & Karne",
         "📄 Resmi DÖF & İhtar Mektubu"
@@ -332,33 +350,71 @@ if secilen_sayfa == "📊 Tedarikçi Kalite & Karar Paneli":
             fig_scatter.update_layout(height=400, margin=dict(l=20, r=20, t=30, b=20))
             st.plotly_chart(fig_scatter, use_container_width=True)
 
-    with tab3:
-        st.subheader("🔮 'What-If' Kalite İyileştirme Simülatörü")
-        sim_supplier = st.selectbox("Simüle Edilecek Tedarikçi:", analyzed_df["Tedarikçi"].unique())
-        sim_row = analyzed_df[analyzed_df["Tedarikçi"] == sim_supplier].iloc[0]
+    # --- YENİ EKLENEN KALİTE OYUNU SEKRESİ ---
+    with tab_game:
+        st.subheader("🎮 Kalite Kontrol Müdürü: Kabul mü, Ret mi?")
+        st.caption("Fabrikaya gelen hammadde ve ambalajların analiz raporlarına göre hızlı ve doğru kalite kararını verin!")
         
-        col_w1, col_w2, col_w3, col_w4 = st.columns(4)
-        new_ret = col_w1.slider("Hedef Ret Oranı (%)", 0.0, 8.0, float(sim_row["Ret Oranı (%)"]), 0.1)
-        new_belge = col_w2.slider("Hedef Belge Eksikliği (%)", 0.0, 8.0, float(sim_row["Belge Eksikliği (%)"]), 0.1)
-        new_uyg = col_w3.slider("Hedef Uygunsuzluk Sayısı", 0, 10, int(sim_row["Uygunsuzluk Sayısı"]), 1)
-        new_teslim = col_w4.slider("Hedef Gecikme (Gün)", 0.0, 8.0, float(sim_row["Ortalama Teslim Gecikmesi (Gün)"]), 0.1)
-        
-        sim_df = analyzed_df.copy()
-        sim_df.loc[sim_df["Tedarikçi"] == sim_supplier, "Ret Oranı (%)"] = new_ret
-        sim_df.loc[sim_df["Tedarikçi"] == sim_supplier, "Belge Eksikliği (%)"] = new_belge
-        sim_df.loc[sim_df["Tedarikçi"] == sim_supplier, "Uygunsuzluk Sayısı"] = new_uyg
-        sim_df.loc[sim_df["Tedarikçi"] == sim_supplier, "Ortalama Teslim Gecikmesi (Gün)"] = new_teslim
-        
-        recalc_df = calculate_scores(sim_df)
-        new_score = recalc_df[recalc_df["Tedarikçi"] == sim_supplier]["Performans Skoru"].iloc[0]
-        old_score = sim_row["Performans Skoru"]
-        delta_score = round(new_score - old_score, 1)
-        
-        col_res_a, col_res_b = st.columns(2)
-        col_res_a.metric("Mevcut Kalite Skoru", f"{old_score} / 100")
-        col_res_b.metric("Simüle Edilen Yeni Skor", f"{new_score} / 100", delta=f"{delta_score} Puan Değişimi")
+        # Skor Tablosu
+        col_g1, col_g2, col_g3 = st.columns(3)
+        col_g1.metric("🏆 Toplam Kalite Skoru", f"{st.session_state['game_score']} Puan")
+        col_g2.metric("🔥 Başarı Serisi (Streak)", f"{st.session_state['game_streak']} Doğru")
+        if col_g3.button("🔄 Skoru Sıfırla & Baştan Başla"):
+            st.session_state["game_score"] = 0
+            st.session_state["game_streak"] = 0
+            st.session_state["current_case_idx"] = random.randint(0, len(GAME_SCENARIOS) - 1)
+            st.session_state["game_last_msg"] = None
+            st.rerun()
 
-    with tab4:
+        # Aktif Vaka Kartı
+        cur_case = GAME_SCENARIOS[st.session_state["current_case_idx"]]
+        st.markdown(
+            f"""
+            <div style='background: rgba(255, 75, 75, 0.08); padding: 22px; border-radius: 12px; border: 1px solid rgba(255, 75, 75, 0.3); margin-top: 15px;'>
+                <h3 style='margin: 0 0 8px 0; color: #FF4B4B;'>📦 Gelen Numune: {cur_case['urun']}</h3>
+                <p style='margin: 0; font-size: 13px; color: gray;'><b>Parti No:</b> {cur_case['lot']}</p>
+                <hr style='border: none; border-top: 1px solid rgba(128,128,128,0.2); margin: 12px 0;'>
+                <p style='font-size: 16px; font-weight: 500;'>🧪 <b>Laboratuvar Kontrol Notu:</b></p>
+                <p style='font-size: 15px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px;'>{cur_case['durum_text']}</p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        col_btn_kabul, col_btn_red = st.columns(2)
+        
+        def process_answer(user_choice):
+            if user_choice == cur_case["dogru"]:
+                st.session_state["game_score"] += 10
+                st.session_state["game_streak"] += 1
+                st.session_state["game_last_msg"] = ("success", f"🎯 Harika karar! Doğru cevap: {cur_case['dogru']}. {cur_case['ipucu']}")
+            else:
+                st.session_state["game_score"] = max(0, st.session_state["game_score"] - 5)
+                st.session_state["game_streak"] = 0
+                st.session_state["game_last_msg"] = ("error", f"❌ Yanlış karar! Doğru karar '{cur_case['dogru']}' olmalıydı. {cur_case['ipucu']}")
+            
+            # Yeni rastgele vaka seç
+            remaining = [i for i in range(len(GAME_SCENARIOS)) if i != st.session_state["current_case_idx"]]
+            st.session_state["current_case_idx"] = random.choice(remaining)
+            st.rerun()
+
+        with col_btn_kabul:
+            if st.button("✅ KABUL ET (Onayla)", use_container_width=True):
+                process_answer("KABUL")
+                
+        with col_btn_red:
+            if st.button("❌ REDDET (Uygunsuzluk Ver)", use_container_width=True):
+                process_answer("RED")
+
+        if st.session_state["game_last_msg"]:
+            msg_type, msg_text = st.session_state["game_last_msg"]
+            if msg_type == "success":
+                st.success(msg_text)
+            else:
+                st.error(msg_text)
+
+    with tab3:
         st.subheader("⚔️ İki Tedarikçi Birebir Kıyaslaması (Radar Analizi)")
         supplier_list = list(analyzed_df["Tedarikçi"].unique())
         col_s1, col_s2 = st.columns(2)
@@ -379,7 +435,7 @@ if secilen_sayfa == "📊 Tedarikçi Kalite & Karar Paneli":
             fig_compare.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 100])), height=360, margin=dict(l=40, r=40, t=30, b=30))
             st.plotly_chart(fig_compare, use_container_width=True)
 
-    with tab5:
+    with tab4:
         st.subheader("📈 Tedarikçi 6 Aylık Kalite Trendi")
         trend_supplier = st.selectbox("Trend İncelemesi İçin Tedarikçi:", supplier_list)
         months = ["Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos"]
@@ -392,7 +448,7 @@ if secilen_sayfa == "📊 Tedarikçi Kalite & Karar Paneli":
         fig_trend.update_layout(height=350, margin=dict(l=20, r=20, t=40, b=20))
         st.plotly_chart(fig_trend, use_container_width=True)
 
-    with tab6:
+    with tab5:
         st.subheader("📄 Resmi Kalite DÖF / İhtar Mektubu Üretici")
         selected_for_dof = st.selectbox("İhtar Gönderilecek Firma:", supplier_list, key="dof_select")
         dof_row = analyzed_df[analyzed_df["Tedarikçi"] == selected_for_dof].iloc[0]
@@ -660,7 +716,7 @@ st.sidebar.markdown(
     <div style='background-color: rgba(128, 128, 128, 0.1); padding: 12px; border-radius: 8px; text-align: center; margin-top: 20px;'>
         <p style='margin: 0; font-size: 13px; font-weight: bold;'>Developed by</p>
         <p style='margin: 0; font-size: 18px; color: #FF4B4B; font-weight: 800;'>⚡ miyaetp</p>
-        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v4.2.0 • Fixed Header Edition</p>
+        <p style='margin: 0; font-size: 11px; opacity: 0.7;'>v4.3.0 • Quality Game Edition</p>
     </div>
     """,
     unsafe_allow_html=True
